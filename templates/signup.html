@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup - Medical Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+    {% include 'components/header_component.html' %}
+    <div class="header-spacer"></div> <!-- Add this spacer -->
+
+    <div class="auth-container">
+        <div class="auth-box wide">
+            <div class="auth-header">
+                <i class="fas fa-user-plus"></i>
+                <h1>Create Your Account</h1>
+                <p>Join our healthcare community today</p>
+            </div>
+
+            <div class="role-toggle">
+                <button type="button" class="role-btn active" data-role="patient">
+                    <i class="fas fa-user-circle"></i> Patient
+                </button>
+                <button type="button" class="role-btn" data-role="doctor">
+                    <i class="fas fa-user-md"></i> Doctor
+                </button>
+            </div>
+
+            <form id="signup-form" class="auth-form" method="POST" enctype="multipart/form-data">
+                <div class="form-columns">
+                    <div class="form-column">
+                        <div class="form-group">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="name" name="name" required>
+                            <label>Full Name</label>
+                        </div>
+
+                        <div class="form-group">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" name="email" required>
+                            <label>Email Address</label>
+                        </div>
+
+                        <div class="form-group">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="phone" name="phone" required>
+                            <label>Phone Number</label>
+                        </div>
+
+                        <div class="form-group">
+                            <i class="fas fa-image"></i>
+                            <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
+                            <label>Profile Picture</label>
+                        </div>
+                    </div>
+
+                    <div class="form-column">
+                        <div class="form-group">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" name="password" required>
+                            <label>Password</label>
+                        </div>
+
+                        <div class="form-group">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="confirm_password" name="confirm_password" required>
+                            <label>Confirm Password</label>
+                        </div>
+
+                        <!-- Appointment details section - only visible for clients -->
+                        <div class="appointment-details hidden" id="appointmentDetails">
+                            <h3>Appointment Details</h3>
+                            
+                            <div class="form-group">
+                                <i class="fas fa-calendar"></i>
+                                <input type="date" id="appointment_date" name="appointment_date" min="{{ today_date }}">
+                                <label>Appointment Date</label>
+                            </div>
+
+                            <div class="form-group">
+                                <i class="fas fa-clock"></i>
+                                <input type="time" id="appointment_time" name="appointment_time">
+                                <label>Appointment Time</label>
+                            </div>
+
+                            <div class="form-group">
+                                <i class="fas fa-user-md"></i>
+                                <select id="doctor_email" name="doctor_email">
+                                    <option value="">Select Doctor</option>
+                                    {% for doctor in doctors %}
+                                        <option value="{{ doctor.email }}">
+                                            Dr. {{ doctor.name }} - {{ doctor.specialty }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <i class="fas fa-comment-medical"></i>
+                                <textarea id="appointment_reason" name="appointment_reason" rows="3" placeholder="Please describe your reason for the appointment"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="doctor-fields hidden">
+                            <div class="form-group">
+                                <i class="fas fa-stethoscope"></i>
+                                <input type="text" id="specialty" name="specialty">
+                                <label>Specialty</label>
+                            </div>
+
+                            <div class="form-group">
+                                <i class="fas fa-certificate"></i>
+                                <input type="text" id="license" name="license">
+                                <label>Medical License Number</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-btn">Sign Up</button>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="{{ url_for('login') }}">Sign In</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% include 'components/footer_component.html' %}
+
+    <script src="{{ url_for('static', filename='js/signup.js') }}"></script>
+</body>
+</html>

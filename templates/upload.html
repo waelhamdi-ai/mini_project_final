@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Medical Images</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav-dashboard">
+        <div class="nav-left">
+            {% if profile_picture %}
+                <img src="{{ profile_picture }}" alt="Profile" class="profile-pic">
+            {% else %}
+                <img src="{{ url_for('static', filename='images/default_profile.jpg') }}" alt="Profile" class="profile-pic">
+            {% endif %}
+            <span class="nav-title">Upload Medical Images</span>
+        </div>
+        <div class="nav-right">
+            <a href="/client_dashboard" class="nav-link">Dashboard</a>
+            <a href="/logout" class="nav-link">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="dashboard-container">
+        <div class="upload-section">
+            <div class="upload-card">
+                <div class="upload-header">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h2>Upload New Image</h2>
+                </div>
+                <form id="uploadForm" class="upload-form">
+                    <div class="drop-zone" id="dropZone">
+                        <i class="fas fa-file-medical"></i>
+                        <p>Drag & Drop your medical image here</p>
+                        <span>or</span>
+                        <label for="medical_image" class="upload-btn">Choose File</label>
+                        <input type="file" id="medical_image" name="medical_image" accept="image/*" hidden>
+                    </div>
+                    <div class="preview-container" id="previewContainer">
+                        <img id="imagePreview" src="" alt="">
+                        <button type="button" id="removeImage" class="remove-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <textarea name="image_description" id="image_description" 
+                            placeholder="Add description about the image"></textarea>
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-upload"></i> Upload Image
+                    </button>
+                </form>
+            </div>
+
+            <!-- Gallery Section -->
+            <div class="gallery-section">
+                <h2>Your Uploaded Images</h2>
+                <div class="gallery-grid">
+                    {% if medical_images %}
+                        {% for image in medical_images %}
+                            <div class="gallery-item">
+                                <div class="image-wrapper">
+                                    <img src="{{ image.url }}" alt="Medical Image">
+                                    <div class="image-overlay">
+                                        <button onclick="viewImage('{{ image.url }}')" class="view-btn">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="image-info">
+                                    <p class="description">{{ image.description }}</p>
+                                    <p class="date">{{ image.upload_date }}</p>
+                                    <div class="analysis-badge {{ 'success' if image.analysis_result else 'pending' }}">
+                                        <i class="fas {{ 'fa-check-circle' if image.analysis_result else 'fa-clock' }}"></i>
+                                        {{ image.analysis_result if image.analysis_result else 'Analysis Pending' }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-images">
+                            <i class="fas fa-image"></i>
+                            <p>No medical images uploaded yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="modal-close">&times;</span>
+        <img id="modalImage" class="modal-content">
+    </div>
+
+    <!-- Update Loading Spinner -->
+    <div id="loadingSpinner" class="loading-overlay">
+        <div class="spinner-content">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: var(--dark);">Uploading image...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+</body>
+</html>

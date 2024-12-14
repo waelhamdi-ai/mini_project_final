@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments</title>
+    <script src="https://kit.fontawesome.com/c1df782baf.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-thin-rounded/css/uicons-thin-rounded.css'>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            background-color: #333;
+            padding: 10px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .flip-card {
+            background-color: transparent;
+            width: 100%;
+            height: 250px;
+            perspective: 1000px;
+            margin: 20px 0;
+        }
+
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+        }
+
+        .flip-card:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-front,
+        .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .flip-card-front {
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .flip-card-front img {
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+
+        .flip-card-front h5 {
+            color: #343a40;
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .flip-card-back {
+            background: linear-gradient(90deg, #6c757d, #343a40);
+            color: white;
+            transform: rotateY(180deg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .flip-card-back p {
+            margin: 6px 0;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .alert {
+            padding: 10px;
+            background-color: #dff0d8;
+            color: #3c763d;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header section -->
+    <header>
+        <div class="logo"><img src="../static/images/logo3.png" alt=""></div>
+        <nav class="navbar">
+            <!-- ...existing navigation items... -->
+        </nav>
+        <div class="right-icons">
+            <!-- ...existing right icons... -->
+        </div>
+    </header>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div>
+            <a class="navbar-brand" href="#">
+                {% if profile_picture %}
+                    <img src="{{ profile_picture }}" alt="Profile" class="profile-img" style="width:40px;height:40px;border-radius:50%;">
+                {% else %}
+                    <img src="{{ url_for('static', filename='images/default_profile.jpg') }}" alt="Profile" class="profile-img" style="width:40px;height:40px;border-radius:50%;">
+                {% endif %}
+                Doctor Dashboard
+            </a>
+        </div>
+        <div>
+            <a class="nav-link" href="/doctor_dashboard">Home</a>
+            <a class="nav-link" href="/appointments">Appointments</a>
+            <a class="nav-link" href="/settings">Settings</a>
+            <a class="nav-link" href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <h2>
+            {% if is_doctor %}
+                All Patient Appointments
+            {% else %}
+                Your Appointment
+            {% endif %}
+        </h2>
+        <div class="row">
+            {% if appointments %}
+                {% for appointment in appointments %}
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <!-- Front Side -->
+                            <div class="flip-card-front">
+                                <img src="{{ appointment.profile_picture or url_for('static', filename='images/default_profile.jpg') }}" 
+                                     alt="Profile">
+                                <h5>{{ appointment.client_name }}</h5>
+                                <p>{{ appointment.date }}</p>
+                            </div>
+                            <!-- Back Side -->
+                            <div class="flip-card-back">
+                                <p><strong>Email:</strong> {{ appointment.client_email }}</p>
+                                <p><strong>Date:</strong> {{ appointment.date }}</p>
+                                <p><strong>Time:</strong> {{ appointment.time }}</p>
+                                <p><strong>Reason:</strong> {{ appointment.reason }}</p>
+                                <p><strong>Status:</strong> {{ appointment.status or 'Pending' }}</p>
+                                {% if is_doctor %}
+                                    <button class="btn" onclick="updateStatus('{{ appointment.client_email }}')">
+                                        Update Status
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <p class="text-center text-muted">No appointments found.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer section -->
+    <div class="main-footer">
+        <div class="footer-inner">
+            <!-- ...existing footer content... -->
+        </div>
+    </div>
+
+    <script src="../static/js/script.js"></script>
+</body>
+</html>

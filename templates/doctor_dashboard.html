@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard</title>
+    <script src="https://kit.fontawesome.com/c1df782baf.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-thin-rounded/css/uicons-thin-rounded.css'>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <link rel="stylesheet" href="../static/css/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            background-color: #333;
+            padding: 10px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .profile-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .profile-img:hover {
+            transform: scale(1.1);
+        }
+
+        .dashboard-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .dashboard-card p {
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        .dashboard-card a {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/nav_dashboard.html' %}
+    
+    <div class="dashboard-container">
+        <h2 class="welcome-header">Welcome, Dr. {{ user_data.name }}</h2>
+        
+        <div class="dashboard-cards">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="card-header">Your Appointments</div>
+                <div class="card-body">
+                    <p>You have {{ appointments|length }} upcoming appointments</p>
+                    <a href="/appointments" class="dashboard-btn">View Details</a>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-user-injured"></i>
+                </div>
+                <div class="card-header">Patient Records</div>
+                <div class="card-body">
+                    <p>Access and manage patient medical records</p>
+                    <a href="/patients" class="dashboard-btn">View Records</a>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="card-header">Chat Center</div>
+                <div class="card-body">
+                    <p>Communicate with your patients</p>
+                    <a href="/chat" class="dashboard-btn">Open Chat</a>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div class="card-header">Settings</div>
+                <div class="card-body">
+                    <p>Manage your profile and preferences</p>
+                    <a href="{{ url_for('settings') }}" class="dashboard-btn">Configure</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer section -->
+    <div class="main-footer">
+        <div class="footer-inner">
+            <!-- ...existing footer content... -->
+        </div>
+    </div>
+    <!-- Footer section ended -->
+
+    <script src="../static/js/script.js"></script>
+</body>
+</html>

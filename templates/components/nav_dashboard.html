@@ -1,0 +1,19 @@
+
+<nav class="nav-dashboard">
+    <div class="nav-left">
+        <a href="/" class="logo">
+            <img src="{{ url_for('static', filename='images/logo3.png') }}" alt="Logo">
+        </a>
+    </div>
+    <div class="nav-right">
+        <div class="user-profile">
+            <img src="{{ session['profile_picture'] or url_for('static', filename='images/default_profile.jpg') }}" 
+                 alt="Profile" 
+                 class="profile-pic">
+            <div class="dropdown-menu">
+                <a href="/settings">Settings</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <script src="https://kit.fontawesome.com/c1df782baf.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-thin-rounded/css/uicons-thin-rounded.css'>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+</head>
+<body>
+    <!-- Replace the old header with the header component -->
+    {% include 'components/header_component.html' %}
+
+    <div class="chat-container">
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-comments"></i> Conversations</h3>
+            </div>
+            <div class="user-list">
+                {% for user in users %}
+                    <div class="user-item" data-email="{{ user.email }}">
+                        <div class="user-avatar">
+                            <img src="{{ user.profile_picture or url_for('static', filename='images/default_profile.jpg') }}" alt="Profile">
+                            <span class="user-status"></span>
+                        </div>
+                        <div class="user-info">
+                            <h4>{{ user.name }}</h4>
+                            <p>{{ user.email }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="selected-user">
+                    <div class="user-avatar">
+                        <img src="{{ url_for('static', filename='images/default_profile.jpg') }}" alt="Selected User">
+                        <span class="user-status"></span>
+                    </div>
+                    <div class="user-info">
+                        <h4>Select a conversation</h4>
+                        <p class="user-status-text">No user selected</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chat-box">
+                <!-- Messages will be loaded here -->
+            </div>
+
+            <div class="chat-input">
+                <form id="chat-form">
+                    <div class="input-group">
+                        <input type="text" id="message" placeholder="Type a message...">
+                        <button type="submit">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const currentUserEmail = "{{ session['user_email'] }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>

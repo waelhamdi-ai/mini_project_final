@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            background-color: #333;
+            padding: 10px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .profile-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .profile-img:hover {
+            transform: scale(1.1);
+        }
+
+        .dashboard-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .dashboard-card p {
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        .dashboard-card a {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    {% if session %}
+    <!-- Debug info -->
+    <div style="display:none">
+        <p>Session data:</p>
+        <p>Email: {{ session.user_email }}</p>
+        <p>Role: {{ session.user_role }}</p>
+    </div>
+    {% endif %}
+    {% include 'components/nav_dashboard.html' %}
+    
+    <div class="dashboard-container">
+        <h2 class="welcome-header">Welcome, {{ user_data.name }}</h2>
+        
+        <div class="dashboard-cards">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="card-header">Your Appointments</div>
+                <div class="card-body">
+                    <p>View upcoming and past appointments.</p>
+                    <a href="/appointments" class="dashboard-btn">View Details</a>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-file-medical"></i>
+                </div>
+                <div class="card-header">Medical Records</div>
+                <div class="card-body">
+                    <p>Access your medical records and prescriptions.</p>
+                    <a href="/records" class="dashboard-btn">View Details</a>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-upload"></i>
+                </div>
+                <div class="card-header">Upload Documents</div>
+                <div class="card-body">
+                    <p>Upload medical images for analysis.</p>
+                    <a href="{{ url_for('upload_page') }}" class="dashboard-btn">Upload Files</a>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="card-header">Chat with Doctor</div>
+                <div class="card-body">
+                    <p>Chat with your doctor in real-time.</p>
+                    <a href="/chat" class="dashboard-btn">Start Chat</a>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div class="card-header">Settings</div>
+                <div class="card-body">
+                    <p>Manage your profile and preferences</p>
+                    <a href="{{ url_for('settings') }}" class="dashboard-btn">Configure</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer section -->
+    <div class="main-footer">
+        <!-- ...footer content similar to index.html... -->
+    </div>
+    <!-- Footer section ended -->
+</body>
+</html>

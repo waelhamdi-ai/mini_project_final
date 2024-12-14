@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Images</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            background-color: #333;
+            padding: 10px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h3 {
+            text-align: center;
+            color: #333;
+        }
+
+        .card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .card img {
+            border-radius: 10px;
+            width: 100%;
+            height: auto;
+        }
+
+        .card-body {
+            padding: 10px;
+        }
+
+        .card-text {
+            margin: 10px 0;
+            color: #555;
+        }
+
+        .alert {
+            padding: 10px;
+            background-color: #dff0d8;
+            color: #3c763d;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header section -->
+    <header>
+        <!-- ...header content similar to index.html... -->
+    </header>
+    <!-- Header section ended -->
+
+    <div class="container">
+        <h3>Medical Images for {{ client_name }}</h3>
+        <div class="row">
+            {% if medical_images %}
+                {% for image in medical_images %}
+                    <div class="card">
+                        <img src="{{ image.url }}" alt="Medical Image">
+                        <div class="card-body">
+                            <p class="card-text">{{ image.description }}</p>
+                            <p class="card-text"><small class="text-muted">Uploaded on: {{ image.upload_date }}</small></p>
+                            {% if image.analysis_result %}
+                                <div class="alert alert-info">
+                                    Analysis Result: {{ image.analysis_result }}
+                                </div>
+                                <form action="/confirm_analysis" method="post">
+                                    <input type="hidden" name="image_id" value="{{ image.id }}">
+                                    <button type="submit" class="btn">Confirm</button>
+                                </form>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    Analysis Pending
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <p class="text-muted">No medical images uploaded yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer section -->
+    <div class="main-footer">
+        <!-- ...footer content similar to index.html... -->
+    </div>
+    <!-- Footer section ended -->
+</body>
+</html>

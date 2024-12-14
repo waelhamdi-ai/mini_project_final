@@ -1,0 +1,45 @@
+<header class="main-header">
+    <div class="logo">
+        <img src="{{ url_for('static', filename='images/logo3.png') }}" alt="Logo">
+    </div>
+    
+    <nav class="navbar">
+        <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>Home</a>
+        <a href="/#main-about">About us</a>
+        <a href="/#Our_Doctors">Doctors</a>
+        <a href="/#our_services">Services</a>
+        <a href="/#review">Review</a>
+        {% if session['user_role'] == 'doctor' %}
+            <a href="/chat" {% if request.endpoint == 'chat' %}class="active"{% endif %}>Chat</a>
+        {% endif %}
+    </nav>
+
+    <div class="right-menu">
+        {% if session['user_email'] %}
+            <div class="profile-menu">
+                <div class="profile-trigger">
+                    <img src="{{ session['profile_picture'] or url_for('static', filename='images/default_profile.jpg') }}" 
+                         alt="Profile" 
+                         class="profile-img">
+                    <span class="username">{{ session['user_name'] }}</span>
+                </div>
+                <div class="dropdown-content">
+                    <a href="/dashboard">
+                        <i class="fas fa-columns"></i> Dashboard
+                    </a>
+                    <a href="/settings">
+                        <i class="fas fa-cog"></i> Settings
+                    </a>
+                    <a href="/logout" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="auth-buttons">
+                <a href="{{ url_for('login') }}" class="btn login-btn">Login</a>
+                <a href="{{ url_for('signup') }}" class="btn signup-btn">Sign Up</a>
+            </div>
+        {% endif %}
+    </div>
+</header>

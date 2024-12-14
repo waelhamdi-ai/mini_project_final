@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .alert {
+            padding: 10px;
+            background-color: #dff0d8;
+            color: #3c763d;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header section -->
+    <header>
+        <!-- ...header content similar to index.html... -->
+    </header>
+    <!-- Header section ended -->
+
+    <div class="dashboard-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <h2 class="welcome-header">Account Settings</h2>
+        
+        <div class="settings-grid">
+            <div class="settings-card">
+                <div class="card-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h3>Profile Information</h3>
+                <form action="{{ url_for('settings') }}" method="post" class="settings-form">
+                    <div class="form-group">
+                        <label for="new_name">Display Name</label>
+                        <input type="text" id="new_name" name="new_name" value="{{ user_data.name }}" required>
+                    </div>
+                    <button type="submit" class="dashboard-btn">Update Profile</button>
+                </form>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3>Security</h3>
+                <form action="{{ url_for('settings') }}" method="post" class="settings-form">
+                    <div class="form-group">
+                        <label for="new_password">New Password</label>
+                        <input type="password" id="new_password" name="new_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <button type="submit" class="dashboard-btn">Change Password</button>
+                </form>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-icon">
+                    <i class="fas fa-image"></i>
+                </div>
+                <h3>Profile Picture</h3>
+                <form action="/upload_profile_picture" method="post" enctype="multipart/form-data" class="settings-form">
+                    <div class="form-group">
+                        <label for="profile_picture">Select Image</label>
+                        <input type="file" id="profile_picture" name="profile_picture" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="dashboard-btn">Upload Picture</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer section -->
+    <div class="main-footer">
+        <!-- ...footer content similar to index.html... -->
+    </div>
+    <!-- Footer section ended -->
+</body>
+</html>

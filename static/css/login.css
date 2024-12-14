@@ -1,0 +1,146 @@
+/* Global Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #d4f1f9, #76d4c6);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Container */
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    background: #fff;
+    padding: 30px 40px;
+    border-radius: 10px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 1s ease-in-out;
+}
+
+/* Logo */
+.logo {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logo i {
+    font-size: 50px;
+    color: #2b9b85;
+}
+
+.logo h1 {
+    margin: 10px 0 0;
+    color: #2b9b85;
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+/* Header */
+.login-box h2 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.login-box p {
+    color: #555;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+/* Form Styling */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    border-color: #2b9b85;
+}
+
+.form-group label {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #fff;
+    padding: 0 5px;
+    font-size: 0.9rem;
+    color: #aaa;
+    transition: all 0.3s;
+    pointer-events: none;
+}
+
+.form-group input:focus + label,
+.form-group input:not(:placeholder-shown) + label {
+    top: -10px;
+    font-size: 0.8rem;
+    color: #2b9b85;
+}
+
+/* Button */
+.btn {
+    padding: 10px;
+    font-size: 1rem;
+    background: #2b9b85;
+    border: none;
+    color: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn:hover {
+    background: #21896e;
+}
+
+/* Extras */
+.extras {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.extras a {
+    text-decoration: none;
+    color: #2b9b85;
+    font-size: 0.9rem;
+    margin-right: 10px;
+    transition: color 0.3s;
+}
+
+.extras a:hover {
+    color: #21896e;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

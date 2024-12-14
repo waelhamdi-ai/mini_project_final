@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://kit.fontawesome.com/c1df782baf.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-thin-rounded/css/uicons-thin-rounded.css'>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+    <!-- Header section -->
+    <header>
+        <div class="logo"><img src="../static/images/logo3.png" alt=""></div>
+        <nav class="navbar">
+            <!-- ...existing navigation items... -->
+        </nav>
+        <div class="right-icons">
+            <!-- ...existing right icons... -->
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <i class="fas fa-hospital-user"></i>
+                <h1>Welcome Back</h1>
+                <p>Sign in to access your healthcare dashboard</p>
+            </div>
+
+            <form id="login-form" class="auth-form" onsubmit="return false;">
+                <div class="form-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" name="email" id="email" required>
+                    <label>Email Address</label>
+                </div>
+                
+                <div class="form-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password" id="password" required>
+                    <label>Password</label>
+                </div>
+
+                <button type="submit" class="auth-btn">Sign In</button>
+                
+                <div class="auth-footer">
+                    <p>Don't have an account? 
+                        <a href="{{ url_for('signup') }}">Create Account</a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer section -->
+    <div class="main-footer">
+        <div class="footer-inner">
+            <!-- ...existing footer content... -->
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>
