@@ -119,3 +119,4 @@ dmypy.json
 
 # GitHub specific
 .github/
+"firebase-adminsdk.json" 
