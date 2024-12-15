@@ -12,7 +12,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import io
-
+import json
 firebase_creds = os.getenv('FIREBASE_CREDS')
 if firebase_creds:
     cred = credentials.Certificate(json.loads(firebase_creds))
