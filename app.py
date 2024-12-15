@@ -890,6 +890,37 @@ def check_session():
             'redirect_url': redirect_url
         })
     return jsonify({'logged_in': False})
+    @app.route('/medical_records')
+def medical_records():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        user = auth.get_user_by_email(session['user_email'])
+        user_doc = db.collection('users').document(user.uid).get()
+        user_data = user_doc.to_dict() if user_doc.exists else {}
+
+        # Fetch medical records
+        medical_records = []
+        records_ref = db.collection('users').document(user.uid)\
+                        .collection('medical_records')\
+                        .order_by('upload_date', direction=firestore.Query.DESCENDING)\
+                        .stream()
+
+        for record in records_ref:
+            record_data = record.to_dict()
+            if 'upload_date' in record_data and record_data['upload_date']:
+                record_data['upload_date'] = record_data['upload_date'].strftime('%Y-%m-%d %H:%M:%S')
+            medical_records.append(record_data)
+
+        return render_template('medical_records.html',
+                               user_data=user_data,
+                               medical_records=medical_records,
+                               profile_picture=user_data.get('profile_picture'))
+
+    except Exception as e:
+        print(f"Error in medical records page: {str(e)}")
+        return redirect(url_for('client_dashboard'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
