@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Records</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    {% include 'components/nav_dashboard.html' %}
+    
+    <div class="dashboard-container">
+        <h2 class="welcome-header">Your Medical Records</h2>
+        
+        <div class="records-grid">
+            {% if medical_records %}
+                {% for record in medical_records %}
+                    <div class="record-card">
+                        <div class="image-container">
+                            <img src="{{ record.url }}" alt="Medical Image">
+                            <div class="image-overlay">
+                                <button onclick="viewImage('{{ record.url }}')" class="view-btn">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="record-info">
+                            <p class="date">Uploaded: {{ record.upload_date }}</p>
+                            <p class="description">{{ record.description }}</p>
+                            
+                            <div class="analysis-section">
+                                <div class="ai-analysis">
+                                    <h4>AI Analysis</h4>
+                                    <p>Result: {{ record.ai_prediction }}</p>
+                                    <p>Confidence: {{ "%.2f"|format(record.ai_confidence * 100) }}%</p>
+                                </div>
+
+                                {% if record.doctor_confirmed %}
+                                    <div class="doctor-diagnosis success">
+                                        <h4>Doctor's Diagnosis</h4>
+                                        <p>{{ record.doctor_diagnosis }}</p>
+                                        <small>Confirmed by: {{ record.confirmed_by }}</small>
+                                        <small>Date: {{ record.confirmation_date }}</small>
+                                    </div>
+                                {% else %}
+                                    <div class="doctor-diagnosis pending">
+                                        <i class="fas fa-clock"></i>
+                                        <p>Awaiting doctor's diagnosis</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-records">
+                    <i class="fas fa-file-medical"></i>
+                    <p>No medical records found</p>
+                    <a href="{{ url_for('upload_page') }}" class="upload-btn">Upload New Image</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="modal-close">&times;</span>
+        <img id="modalImage" class="modal-content">
+    </div>
+
+    <script>
+        function viewImage(url) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = "block";
+            modalImg.src = url;
+        }
+
+        document.querySelector('.modal-close').onclick = function() {
+            document.getElementById('imageModal').style.display = "none";
+        }
+    </script>
+    {% include 'components/footer_component.html' %}
+</body>
+</html>

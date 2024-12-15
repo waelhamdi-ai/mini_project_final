@@ -21,10 +21,10 @@
             </div>
 
             <div class="role-toggle">
-                <button type="button" class="role-btn active" data-role="patient">
+                <button type="button" class="role-btn active" data-role="patient" onclick="toggleRole('patient')">
                     <i class="fas fa-user-circle"></i> Patient
                 </button>
-                <button type="button" class="role-btn" data-role="doctor">
+                <button type="button" class="role-btn" data-role="doctor" onclick="toggleRole('doctor')">
                     <i class="fas fa-user-md"></i> Doctor
                 </button>
             </div>
@@ -71,7 +71,7 @@
                         </div>
 
                         <!-- Appointment details section - only visible for clients -->
-                        <div class="appointment-details hidden" id="appointmentDetails">
+                        <div class="appointment-details" id="appointmentDetails">
                             <h3>Appointment Details</h3>
                             
                             <div class="form-group">

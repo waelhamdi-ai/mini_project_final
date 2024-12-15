@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Records</title>
+    <script src="https://kit.fontawesome.com/c1df782baf.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        .patients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .patient-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .patient-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .patient-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .patient-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .patient-info h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .patient-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .patient-stats {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .patient-actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .view-btn {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .chat-btn {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/nav_dashboard.html' %}
+    
+    <div class="dashboard-container">
+        <h2 class="welcome-header">Patient Records</h2>
+        
+        <div class="patients-grid">
+            {% for client in clients %}
+                <div class="patient-card">
+                    <div class="patient-header">
+                        <img src="{{ client.profile_picture or url_for('static', filename='images/default_profile.jpg') }}" 
+                             alt="{{ client.name }}" 
+                             class="patient-avatar">
+                        <div class="patient-info">
+                            <h3>{{ client.name }}</h3>
+                            <p>{{ client.email }}</p>
+                        </div>
+                    </div>
+                    <div class="patient-stats">
+                        <p><i class="fas fa-image"></i> {{ client.images_count }} medical images</p>
+                        <p><i class="fas fa-calendar"></i> Last visit: {{ client.last_visit }}</p>
+                    </div>
+                    <div class="patient-actions">
+                        <a href="{{ url_for('client_images', client_email=client.email) }}" class="action-btn view-btn">
+                            <i class="fas fa-eye"></i> View Records
+                        </a>
+                        <a href="{{ url_for('chat') }}" class="action-btn chat-btn">
+                            <i class="fas fa-comments"></i> Chat
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% include 'components/footer_component.html' %}
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

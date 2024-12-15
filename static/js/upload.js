@@ -61,6 +61,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 dropZone.style.display = 'none';
             };
             reader.readAsDataURL(file);
+        } else {
+            showToast('Please select a valid image file', 'error');
         }
     }
 
@@ -92,12 +94,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                showToast('Image uploaded successfully!', 'success');
+                let message = `Image uploaded successfully!\nAI Prediction: ${data.prediction}\nConfidence: ${(data.confidence * 100).toFixed(2)}%`;
+                showToast(message, 'success');
                 setTimeout(() => {
                     if (data.redirect) {
                         window.location.href = data.redirect;
                     }
-                }, 1000);
+                }, 2000);
             } else {
                 showToast(data.message || 'Upload failed', 'error');
             }

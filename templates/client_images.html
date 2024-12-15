@@ -3,147 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Images</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 0;
-        }
-
-        .navbar {
-            background-color: #333;
-            padding: 10px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .navbar a {
-            color: #fff;
-            text-decoration: none;
-            margin: 0 10px;
-        }
-
-        .navbar a:hover {
-            text-decoration: underline;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-        }
-
-        h3 {
-            text-align: center;
-            color: #333;
-        }
-
-        .card {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
-
-        .card img {
-            border-radius: 10px;
-            width: 100%;
-            height: auto;
-        }
-
-        .card-body {
-            padding: 10px;
-        }
-
-        .card-text {
-            margin: 10px 0;
-            color: #555;
-        }
-
-        .alert {
-            padding: 10px;
-            background-color: #dff0d8;
-            color: #3c763d;
-            border-radius: 5px;
-            margin-top: 15px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn:hover {
-            background-color: #0056b3;
-        }
-    </style>
+    <title>Client Medical Images</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
 </head>
 <body>
-    <!-- Header section -->
-    <header>
-        <!-- ...header content similar to index.html... -->
-    </header>
-    <!-- Header section ended -->
+    <nav class="nav-dashboard">
+        <div class="nav-left">
+            <span class="nav-title">{{ client_name }}'s Medical Images</span>
+        </div>
+        <div class="nav-right">
+            <a href="/doctor_dashboard" class="nav-link">Dashboard</a>
+            <a href="/logout" class="nav-link">Logout</a>
+        </div>
+    </nav>
 
-    <div class="container">
-        <h3>Medical Images for {{ client_name }}</h3>
-        <div class="row">
-            {% if medical_images %}
-                {% for image in medical_images %}
-                    <div class="card">
-                        <img src="{{ image.url }}" alt="Medical Image">
-                        <div class="card-body">
-                            <p class="card-text">{{ image.description }}</p>
-                            <p class="card-text"><small class="text-muted">Uploaded on: {{ image.upload_date }}</small></p>
-                            {% if image.analysis_result %}
-                                <div class="alert alert-info">
-                                    Analysis Result: {{ image.analysis_result }}
+    <div class="dashboard-container">
+        <div class="gallery-section">
+            <div class="gallery-grid">
+                {% if medical_images %}
+                    {% for image in medical_images %}
+                        <div class="gallery-item">
+                            <div class="image-wrapper">
+                                <img src="{{ image.url }}" alt="Medical Image">
+                                <div class="image-overlay">
+                                    <button onclick="viewImage('{{ image.url }}')" class="view-btn">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
                                 </div>
-                                <form action="/confirm_analysis" method="post">
-                                    <input type="hidden" name="image_id" value="{{ image.id }}">
-                                    <button type="submit" class="btn">Confirm</button>
-                                </form>
-                            {% else %}
-                                <div class="alert alert-warning">
-                                    Analysis Pending
+                            </div>
+                            <div class="image-info">
+                                <p class="description">{{ image.description }}</p>
+                                <p class="date">{{ image.upload_date }}</p>
+                                <div class="ai-analysis">
+                                    {% if image.ai_prediction and image.ai_prediction != 'Not analyzed' %}
+                                        <p class="ai-result">AI Analysis: {{ image.ai_prediction }}</p>
+                                        <p class="ai-confidence">Confidence: {{ "%.2f"|format(image.ai_confidence * 100) }}%</p>
+                                    {% else %}
+                                        <p class="ai-result">AI Analysis: Not available</p>
+                                    {% endif %}
+                                    
+                                    {% if not image.doctor_confirmed %}
+                                        <div class="confirmation-form">
+                                            <textarea id="diagnosis-{{ image.id }}" placeholder="Enter your diagnosis"></textarea>
+                                            <button onclick="confirmDiagnosis('{{ image.id }}')" class="confirm-btn">
+                                                Confirm Diagnosis
+                                            </button>
+                                        </div>
+                                    {% else %}
+                                        <div class="doctor-confirmation">
+                                            <i class="fas fa-check-circle"></i>
+                                            <p>Your Diagnosis: {{ image.doctor_diagnosis or 'No diagnosis provided' }}</p>
+                                            <small>Confirmed on: {{ image.confirmation_date or 'Unknown date' }}</small>
+                                        </div>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
+                            </div>
                         </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-images">
+                        <i class="fas fa-image"></i>
+                        <p>No medical images uploaded yet</p>
                     </div>
-                {% endfor %}
-            {% else %}
-                <div class="col-12">
-                    <p class="text-muted">No medical images uploaded yet.</p>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <!-- Footer section -->
-    <div class="main-footer">
-        <!-- ...footer content similar to index.html... -->
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="modal-close">&times;</span>
+        <img id="modalImage" class="modal-content">
     </div>
-    <!-- Footer section ended -->
+
+    <script>
+        function confirmDiagnosis(imageId) {
+            const diagnosisText = document.getElementById(`diagnosis-${imageId}`).value;
+            if (!diagnosisText) {
+                alert('Please enter your diagnosis');
+                return;
+            }
+
+            fetch('/confirm_diagnosis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image_id: imageId,
+                    diagnosis: diagnosisText,
+                    client_email: '{{ client_email }}' // Add this line
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Diagnosis confirmed successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error confirming diagnosis');
+            });
+        }
+
+        function viewImage(url) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = "block";
+            modalImg.src = url;
+        }
+
+        document.querySelector('.modal-close').onclick = function() {
+            document.getElementById('imageModal').style.display = "none";
+        }
+    </script>
+    {% include 'components/footer_component.html' %}
 </body>
 </html>

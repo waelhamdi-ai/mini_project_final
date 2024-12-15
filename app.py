@@ -1,10 +1,9 @@
-import os
-import json
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import datetime, timedelta  # Add timedelta here
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from werkzeug.utils import secure_filename
+import os
 import cloudinary
 import cloudinary.uploader
 import requests  # Add this import statement
@@ -15,13 +14,8 @@ from PIL import Image
 import io
 
 # Initialize Firebase Admin SDK
-firebase_creds = os.getenv('FIREBASE_CREDS')
-if firebase_creds:
-    cred = credentials.Certificate(json.loads(firebase_creds))
-    firebase_admin.initialize_app(cred)
-else:
-    raise ValueError("FIREBASE_CREDS environment variable not set")
-
+cred = credentials.Certificate('firebase-adminsdk.json')  # Make sure this file is in the right directory
+firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # Initialize Cloudinary
@@ -157,10 +151,7 @@ def login():
                 # Set session data with role mapping
                 user_data = user_doc.to_dict()
                 session['user_email'] = email
-                # Map 'patient' role to 'client'
                 role = user_data.get('role', 'client')
-                if role == 'patient':
-                    role = 'client'
                 session['user_role'] = role
                 session['profile_picture'] = user_data.get('profile_picture')
                 
@@ -193,88 +184,72 @@ def login():
 def signup():
     if request.method == 'POST':
         try:
-            # Check content type
-            if not request.is_json:
-                return jsonify({
-                    "success": False,
-                    "message": "Content-Type must be application/json"
-                }), 415
-
-            data = request.get_json()
-            print("Received signup data:", data)  # Debug log
-
+            # Get form data
+            name = request.form.get('name')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            role = request.form.get('role')
+            
             # Create user in Firebase Auth
-            try:
-                user = auth.create_user(
-                    email=data['email'],
-                    password=data['password'],
-                    display_name=data['name']
-                )
+            user = auth.create_user(
+                email=email,
+                password=password,
+                display_name=name
+            )
 
-                # Prepare user data for Firestore
-                user_data = {
-                    'name': data['name'],
-                    'email': data['email'],
-                    'phone': data.get('phone', ''),
-                    'role': data['role'],
-                    'created_at': firestore.SERVER_TIMESTAMP
-                }
+            # Handle profile picture upload
+            profile_picture_url = None
+            if 'profile_picture' in request.files:
+                profile_pic = request.files['profile_picture']
+                if profile_pic and profile_pic.filename:
+                    try:
+                        upload_result = cloudinary.uploader.upload(
+                            profile_pic,
+                            folder=f"profile_pictures/{email}"
+                        )
+                        profile_picture_url = upload_result['secure_url']
+                    except Exception as e:
+                        print(f"Error uploading profile picture: {str(e)}")
 
-                # Add role-specific data
-                if data['role'] == 'patient':
-                    # Add appointment data
-                    user_data.update({
-                        'appointment_date': data.get('appointment_date'),
-                        'appointment_time': data.get('appointment_time'),
-                        'appointment_reason': data.get('appointment_reason'),
-                        'doctor_email': data.get('doctor_email'),
-                        'status': 'pending'  # Appointment status
-                    })
-                    
-                    # Create appointment document
-                    appointment_data = {
-                        'patient_email': data['email'],
-                        'patient_name': data['name'],
-                        'doctor_email': data.get('doctor_email'),
-                        'date': data.get('appointment_date'),
-                        'time': data.get('appointment_time'),
-                        'reason': data.get('appointment_reason'),
-                        'status': 'pending',
-                        'created_at': firestore.SERVER_TIMESTAMP
-                    }
-                    
-                    # Save appointment in appointments collection
-                    db.collection('appointments').add(appointment_data)
+            # Prepare user data for Firestore
+            user_data = {
+                'name': name,
+                'email': email,
+                'phone': request.form.get('phone', ''),
+                'role': role,
+                'profile_picture': profile_picture_url,
+                'created_at': firestore.SERVER_TIMESTAMP
+            }
 
-                elif data['role'] == 'doctor':
-                    user_data.update({
-                        'specialty': data.get('specialty', ''),
-                        'experience': data.get('experience', ''),
-                        'license': data.get('license', '')
-                    })
-
-                # Save user data in Firestore
-                db.collection('users').document(user.uid).set(user_data)
-
-                print(f"User created successfully: {user.uid}")  # Debug log
-                return jsonify({
-                    "success": True,
-                    "message": "Signup successful!",
-                    "uid": user.uid
+            # Add role-specific data
+            if role == 'patient':
+                user_data.update({
+                    'appointment_date': request.form.get('appointment_date'),
+                    'appointment_time': request.form.get('appointment_time'),
+                    'appointment_reason': request.form.get('appointment_reason'),
+                    'doctor_email': request.form.get('doctor_email'),
+                    'status': 'pending'
+                })
+            elif role == 'doctor':
+                user_data.update({
+                    'specialty': request.form.get('specialty', ''),
+                    'license': request.form.get('license', '')
                 })
 
-            except Exception as e:
-                print(f"Error creating user: {str(e)}")  # Debug log
-                return jsonify({
-                    "success": False,
-                    "message": str(e)
-                }), 400
+            # Save user data in Firestore
+            db.collection('users').document(user.uid).set(user_data)
+
+            return jsonify({
+                "success": True,
+                "message": "Signup successful!",
+                "uid": user.uid
+            })
 
         except Exception as e:
-            print(f"Server error: {str(e)}")  # Debug log
+            print(f"Error in signup: {str(e)}")
             return jsonify({
                 "success": False,
-                "message": f"Server error: {str(e)}"
+                "message": str(e)
             }), 500
 
     # GET request - fetch doctors for the form
@@ -357,6 +332,9 @@ def doctor_dashboard():
             print(f"Error in doctor dashboard: {str(e)}")
             session.pop('user_email', None)
             session.pop('user_role', None)
+            print(f"Error in doctor dashboard: {str(e)}")
+            session.pop('user_email', None)
+            session.pop('user_role', None)
             return redirect(url_for('login'))
     return redirect(url_for('login'))
 
@@ -406,6 +384,7 @@ def change_password():
         return jsonify({"success": True, "message": "Password updated successfully!"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
+
 
 
 @app.route('/upload_profile_picture', methods=['POST'])
@@ -478,41 +457,42 @@ def get_messages():
         messages = []
         
         # Get messages where current user is sender
-        sent_query = db.collection('messages')\
+        sent_messages = db.collection('messages')\
             .where('sender_email', '==', user_email)\
             .where('recipient_email', '==', recipient_email)\
             .stream()
-            
+
         # Get messages where current user is recipient
-        received_query = db.collection('messages')\
+        received_messages = db.collection('messages')\
             .where('sender_email', '==', recipient_email)\
             .where('recipient_email', '==', user_email)\
             .stream()
 
-        for msg in sent_query:
+        # Process sent messages
+        for msg in sent_messages:
             msg_data = msg.to_dict()
-            timestamp = msg_data.get('timestamp', 0)
-            if timestamp > after_timestamp:
+            timestamp = msg_data.get('timestamp')
+            if timestamp and timestamp.timestamp() > after_timestamp:
                 messages.append({
                     'sender_email': user_email,
                     'sender_profile_picture': session.get('profile_picture'),
                     'message': msg_data['message'],
-                    'timestamp': timestamp
+                    'timestamp': timestamp.timestamp()
                 })
 
-        for msg in received_query:
+        # Process received messages
+        for msg in received_messages:
             msg_data = msg.to_dict()
-            timestamp = msg_data.get('timestamp', 0)
-            if timestamp > after_timestamp:
-                sender_doc = db.collection('users').where('email', '==', recipient_email).limit(1).get()
-                sender_data = next(iter(sender_doc)).to_dict() if sender_doc else {}
+            timestamp = msg_data.get('timestamp')
+            if timestamp and timestamp.timestamp() > after_timestamp:
                 messages.append({
                     'sender_email': recipient_email,
-                    'sender_profile_picture': sender_data.get('profile_picture'),
+                    'sender_profile_picture': msg_data.get('sender_profile_picture'),
                     'message': msg_data['message'],
-                    'timestamp': timestamp
+                    'timestamp': timestamp.timestamp()
                 })
 
+        # Sort messages by timestamp
         messages.sort(key=lambda x: x['timestamp'])
         return jsonify(messages)
 
@@ -533,11 +513,16 @@ def send_message():
         return jsonify({"success": False, "message": "Message and recipient are required."})
 
     try:
+        # Get sender info
         sender = auth.get_user_by_email(session['user_email'])
         sender_doc = db.collection('users').document(sender.uid).get()
         sender_data = sender_doc.to_dict()
 
+        # Generate a unique ID using timestamp and random string
+        message_id = f"{int(time.time() * 1000)}-{os.urandom(4).hex()}"
+
         message_data = {
+            'id': message_id,
             'sender': sender.uid,
             'sender_email': session['user_email'],
             'sender_name': sender_data.get('name', ''),
@@ -547,18 +532,13 @@ def send_message():
             'timestamp': firestore.SERVER_TIMESTAMP
         }
 
-        # Add message to Firestore
-        db.collection('messages').add(message_data)
+        # Add message to Firestore using the generated ID
+        db.collection('messages').document(message_id).set(message_data)
 
         return jsonify({
             "success": True,
             "message": "Message sent successfully!",
-            "data": {
-                "sender_email": session['user_email'],
-                "sender_profile_picture": sender_data.get('profile_picture'),
-                "message": message,
-                "timestamp": datetime.now().timestamp()
-            }
+            "message_id": message_id  # Return the message ID
         })
 
     except Exception as e:
@@ -567,7 +547,7 @@ def send_message():
 
 @app.route('/appointments')
 def appointments():
-    if ('user_email' not in session):
+    if 'user_email' not in session:
         return redirect(url_for('login'))
     
     try:
@@ -575,40 +555,46 @@ def appointments():
         user_doc = db.collection('users').document(user.uid).get()
         user_data = user_doc.to_dict()
 
-        if (session['user_role'] == 'doctor'):
-            # Get all clients with appointments for the logged-in doctor
-            clients = db.collection('users').where('role', '==', 'client').where('doctor_email', '==', session['user_email']).stream()
+        if session['user_role'] == 'doctor':
+            # Get all patients with appointments for the logged-in doctor
+            patients = db.collection('users').where('role', '==', 'patient').where('doctor_email', '==', session['user_email']).stream()
             appointments_list = []
             
-            for client in clients:
-                client_data = client.to_dict()
-                if (client_data.get('appointment_date')):  # Check if appointment exists
+            for patient in patients:
+                patient_data = patient.to_dict()
+                if patient_data.get('appointment_date'):  # Check if appointment exists
                     appointments_list.append({
-                        'client_name': client_data.get('name', 'Unknown'),
-                        'client_email': client_data.get('email', ''),
-                        'date': client_data.get('appointment_date', ''),
-                        'time': client_data.get('appointment_time', ''),
-                        'reason': client_data.get('appointment_reason', '')
+                        'patient_name': patient_data.get('name', 'Unknown'),
+                        'patient_email': patient_data.get('email', ''),
+                        'date': patient_data.get('appointment_date', ''),
+                        'time': patient_data.get('appointment_time', ''),
+                        'reason': patient_data.get('appointment_reason', ''),
+                        'profile_picture': patient_data.get('profile_picture', url_for('static', filename='images/default_profile.jpg')),
+                        'status': patient_data.get('status', 'Pending')
                     })
             
             return render_template('appointments.html', 
-                                appointments=appointments_list,
-                                is_doctor=True,
-                                user_data=user_data)
+                                   appointments=appointments_list,
+                                   is_doctor=True,
+                                   profile_picture=session.get('profile_picture'),
+                                   user_data=user_data)
         else:
-            # Get client's own appointment
+            # Get patient's own appointment
             appointment = {
-                'client_name': user_data.get('name'),
-                'client_email': user_data.get('email'),
+                'patient_name': user_data.get('name'),
+                'patient_email': user_data.get('email'),
                 'date': user_data.get('appointment_date'),
                 'time': user_data.get('appointment_time'),
-                'reason': user_data.get('appointment_reason')
+                'reason': user_data.get('appointment_reason'),
+                'profile_picture': user_data.get('profile_picture', url_for('static', filename='images/default_profile.jpg')),
+                'status': user_data.get('status', 'Pending')
             }
             
             return render_template('appointments.html',
-                                appointments=[appointment],
-                                is_doctor=False,
-                                user_data=user_data)
+                                   appointments=[appointment],
+                                   is_doctor=False,
+                                   profile_picture=session.get('profile_picture'),
+                                   user_data=user_data)
 
     except Exception as e:
         print(f"Error in appointments route: {str(e)}")
@@ -702,25 +688,37 @@ def dashboard():
 
 @app.route('/upload_medical_image', methods=['POST'])
 def upload_medical_image():
-    if ('user_email' not in session):
+    if 'user_email' not in session:
         return jsonify({"success": False, "message": "Please login first"}), 401
 
-    if ('medical_image' not in request.files):
+    if 'medical_image' not in request.files:
         return jsonify({"success": False, "message": "No file uploaded"}), 400
 
     medical_image = request.files['medical_image']
     description = request.form.get('image_description', '')
 
-    if (medical_image.filename == ''):
+    if medical_image.filename == '':
         return jsonify({"success": False, "message": "No file selected"}), 400
 
     try:
-        # Read the image file
-        image_bytes = medical_image.read()
+        # Save file temporarily and get image bytes for AI processing
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(medical_image.filename))
+        medical_image.save(temp_path)
         
+        # Process image with AI model
+        with open(temp_path, 'rb') as img_file:
+            img_bytes = img_file.read()
+            processed_image = preprocess_image(img_bytes)
+            if processed_image is not None:
+                prediction = model.predict(processed_image)
+                predicted_class = categories[np.argmax(prediction)]
+                confidence = float(np.max(prediction))
+            else:
+                predicted_class = "Error processing image"
+                confidence = 0.0
+
         # Upload to Cloudinary
-        upload_result = cloudinary.uploader.upload(
-            medical_image,
+        upload_result = cloudinary.uploader.upload(temp_path,
             folder=f"medical_images/{session['user_email']}"
         )
         file_url = upload_result['secure_url']
@@ -728,14 +726,21 @@ def upload_medical_image():
         # Get user reference
         user = auth.get_user_by_email(session['user_email'])
         
-        # Store in Firestore
+        # Store in Firestore with AI results
         image_data = {
             'url': file_url,
             'description': description,
             'upload_date': firestore.SERVER_TIMESTAMP,
             'filename': medical_image.filename,
-            'status': 'pending_analysis'
+            'ai_prediction': predicted_class,
+            'ai_confidence': confidence,
+            'status': 'pending_doctor_confirmation',
+            'doctor_confirmed': False
         }
+
+        # Clean up temporary file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
         # Add to user's medical_images collection
         db.collection('users').document(user.uid)\
@@ -743,7 +748,9 @@ def upload_medical_image():
 
         return jsonify({
             "success": True, 
-            "message": "Image uploaded successfully",
+            "message": "Image uploaded and analyzed successfully",
+            "prediction": predicted_class,
+            "confidence": confidence,
             "redirect": url_for('upload_page')
         })
 
@@ -752,6 +759,54 @@ def upload_medical_image():
         return jsonify({
             "success": False,
             "message": f"Error uploading image: {str(e)}"
+        }), 500
+
+# Add new route for doctor confirmation
+@app.route('/confirm_diagnosis', methods=['POST'])
+def confirm_diagnosis():
+    if 'user_email' not in session or session['user_role'] != 'doctor':
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    try:
+        data = request.get_json()
+        image_id = data.get('image_id')
+        diagnosis = data.get('diagnosis')
+        client_email = data.get('client_email')  # Get client email from request
+
+        if not all([image_id, diagnosis, client_email]):
+            return jsonify({"success": False, "message": "Missing required data"}), 400
+
+        # First, get the client's document
+        clients = db.collection('users').where('email', '==', client_email).limit(1).stream()
+        client_doc = next(clients, None)
+        
+        if not client_doc:
+            return jsonify({"success": False, "message": "Client not found"}), 404
+
+        # Now update the specific image in the client's medical_images subcollection
+        try:
+            db.collection('users').document(client_doc.id)\
+              .collection('medical_images').document(image_id)\
+              .update({
+                  'doctor_confirmed': True,
+                  'doctor_diagnosis': diagnosis,
+                  'confirmed_by': session['user_email'],
+                  'confirmation_date': firestore.SERVER_TIMESTAMP
+              })
+
+            return jsonify({
+                "success": True,
+                "message": "Diagnosis confirmed successfully"
+            })
+        except Exception as e:
+            print(f"Error updating image: {str(e)}")
+            return jsonify({"success": False, "message": "Error updating image"}), 500
+
+    except Exception as e:
+        print(f"Confirmation error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error confirming diagnosis: {str(e)}"
         }), 500
 
 @app.route('/upload')
@@ -810,34 +865,51 @@ def confirm_analysis():
 
 @app.route('/client_images/<client_email>')
 def client_images(client_email):
-    if ('user_email' in session and session['user_role'] == 'doctor'):
-        try:
-            client_doc = db.collection('users').where('email', '==', client_email).limit(1).get()
-            if (client_doc):
-                client_data = client_doc[0].to_dict()
-                client_name = client_data.get('name', 'Unknown')
+    if 'user_email' not in session or session['user_role'] != 'doctor':
+        return redirect(url_for('login'))
 
-                # Fetch medical images
-                medical_images = []
-                images_ref = db.collection('users').document(client_doc[0].id)\
-                             .collection('medical_images')\
-                             .order_by('upload_date', direction=firestore.Query.DESCENDING)\
-                             .stream()
-                
-                for img in images_ref:
-                    img_data = img.to_dict()
-                    img_data['id'] = img.id
-                    img_data['upload_date'] = img_data['upload_date'].strftime('%Y-%m-%d %H:%M:%S')\
-                        if (img_data.get('upload_date')) else 'Unknown'
-                    medical_images.append(img_data)
-
-                return render_template('client_images.html',
-                                       client_name=client_name,
-                                       medical_images=medical_images)
-        except Exception as e:
-            print(f"Error fetching client images: {str(e)}")
+    try:
+        clients = db.collection('users').where('email', '==', client_email).limit(1).stream()
+        client_doc = next(clients, None)
+        
+        if not client_doc:
             return redirect(url_for('doctor_dashboard'))
-    return redirect(url_for('login'))
+            
+        client_data = client_doc.to_dict()
+        
+        # Fetch medical images
+        medical_images = []
+        images_ref = db.collection('users').document(client_doc.id)\
+                     .collection('medical_images')\
+                     .order_by('upload_date', direction=firestore.Query.DESCENDING)\
+                     .stream()
+        
+        for img in images_ref:
+            img_data = img.to_dict()
+            img_data['id'] = img.id
+            
+            # Handle missing values with defaults
+            if img_data.get('upload_date'):
+                img_data['upload_date'] = img_data['upload_date'].strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                img_data['upload_date'] = 'Unknown'
+                
+            # Set default values for AI prediction and confidence
+            if 'ai_prediction' not in img_data:
+                img_data['ai_prediction'] = 'Not analyzed'
+            if 'ai_confidence' not in img_data:
+                img_data['ai_confidence'] = 0.0
+                
+            medical_images.append(img_data)
+
+        return render_template('client_images.html',
+                           client_name=client_data.get('name', 'Unknown'),
+                           client_email=client_email,
+                           medical_images=medical_images)
+                           
+    except Exception as e:
+        print(f"Error in client_images: {str(e)}")
+        return redirect(url_for('doctor_dashboard'))
 
 @app.route('/check_session')
 def check_session():
@@ -849,5 +921,138 @@ def check_session():
         })
     return jsonify({'logged_in': False})
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+@app.route('/patients')
+def patients():
+    if 'user_email' not in session or session['user_role'] != 'doctor':
+        return redirect(url_for('login'))
+
+    try:
+        # Fetch all clients/patients
+        clients = []
+        clients_ref = db.collection('users').where('role', '==', 'client').stream()
+        
+        for client in clients_ref:
+            client_data = client.to_dict()
+            # Get medical images count for each client
+            images_ref = db.collection('users').document(client.id)\
+                         .collection('medical_images').stream()
+            images_count = sum(1 for _ in images_ref)
+            
+            clients.append({
+                'name': patient_data.get('name', 'Unknown'),
+                'email': patient_data.get('email'),
+                'profile_picture': patient_data.get('profile_picture'),
+                'images_count': images_count,
+                'last_visit': patient_data.get('last_visit', 'No visits yet')
+            })
+
+        return render_template('patients.html', patients=patients)
+        
+    except Exception as e:
+        print(f"Error fetching patients: {str(e)}")
+        return redirect(url_for('doctor_dashboard'))
+
+@app.route('/medical_records')
+def medical_records():
+    if 'user_email' not in session or session['user_role'] != 'client':
+        return redirect(url_for('login'))
+
+    try:
+        # Get user data
+        user = auth.get_user_by_email(session['user_email'])
+        user_doc = db.collection('users').document(user.uid).get()
+        user_data = user_doc.to_dict()
+
+        # Fetch medical images and diagnoses
+        medical_records = []
+        images_ref = db.collection('users').document(user.uid)\
+                     .collection('medical_images')\
+                     .order_by('upload_date', direction=firestore.Query.DESCENDING)\
+                     .stream()
+        
+        for img in images_ref:
+            img_data = img.to_dict()
+            record = {
+                'id': img.id,
+                'url': img_data.get('url'),
+                'upload_date': img_data.get('upload_date').strftime('%Y-%m-%d %H:%M:%S') if img_data.get('upload_date') else 'Unknown',
+                'ai_prediction': img_data.get('ai_prediction', 'Not analyzed'),
+                'ai_confidence': img_data.get('ai_confidence', 0.0),
+                'doctor_diagnosis': img_data.get('doctor_diagnosis'),
+                'doctor_confirmed': img_data.get('doctor_confirmed', False),
+                'confirmed_by': img_data.get('confirmed_by'),
+                'confirmation_date': img_data.get('confirmation_date'),
+                'description': img_data.get('description', '')
+            }
+            medical_records.append(record)
+
+        return render_template('medical_records.html', 
+                            user_data=user_data,
+                            medical_records=medical_records,
+                            profile_picture=user_data.get('profile_picture'))
+
+    except Exception as e:
+        print(f"Error fetching medical records: {str(e)}")
+        return redirect(url_for('client_dashboard'))
+
+@app.route('/update_appointment', methods=['POST'])
+def update_appointment():
+    if 'user_email' not in session or session['user_role'] != 'client':
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    try:
+        data = request.get_json()
+        new_date = data.get('date')
+        new_time = data.get('time')
+
+        if not all([new_date, new_time]):
+            return jsonify({"success": False, "message": "Date and time are required"}), 400
+
+        # Update the appointment in Firestore
+        user = auth.get_user_by_email(session['user_email'])
+        db.collection('users').document(user.uid).update({
+            'appointment_date': new_date,
+            'appointment_time': new_time,
+            'last_updated': firestore.SERVER_TIMESTAMP
+        })
+
+        # Notify the doctor about the change (optional)
+        user_doc = db.collection('users').document(user.uid).get()
+        user_data = user_doc.to_dict()
+        doctor_email = user_data.get('doctor_email')
+        
+        if doctor_email:
+            notification_data = {
+                'type': 'appointment_update',
+                'patient_name': user_data.get('name'),
+                'patient_email': session['user_email'],
+                'new_date': new_date,
+                'new_time': new_time,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            }
+            db.collection('notifications').add(notification_data)
+
+        return jsonify({
+            "success": True,
+            "message": "Appointment updated successfully"
+        })
+
+    except Exception as e:
+        print(f"Error updating appointment: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error updating appointment: {str(e)}"
+        }), 500
+
+@app.route('/change_appointment')
+def change_appointment():
+    if 'user_email' not in session or session['user_role'] != 'client':
+        return redirect(url_for('login'))
+
+    user = auth.get_user_by_email(session['user_email'])
+    user_doc = db.collection('users').document(user.uid).get()
+    user_data = user_doc.to_dict()
+
+    return render_template('change_appointment.html', profile_picture=user_data.get('profile_picture'))
+
+if __name__ == '__main__':    app.run(debug=True, host='0.0.0.0', port=5000)

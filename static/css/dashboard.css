@@ -564,3 +564,142 @@ h2 {
         padding: 1rem;
     }
 }
+
+/* Confirmation Form Styles */
+.confirmation-form {
+    margin-top: 10px;
+    padding: 10px;
+    border-top: 1px solid #eee;
+}
+
+.confirmation-form textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.confirm-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.confirm-btn:hover {
+    background-color: #218838;
+}
+
+.doctor-confirmation {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.doctor-confirmation.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.doctor-confirmation.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.doctor-confirmation i {
+    margin-right: 5px;
+}
+
+/* ...existing styles... */
+
+.records-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.record-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.record-card:hover {
+    transform: translateY(-5px);
+}
+
+.image-container {
+    position: relative;
+    padding-top: 75%;
+}
+
+.image-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.record-info {
+    padding: 1.5rem;
+}
+
+.analysis-section {
+    margin-top: 1rem;
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+}
+
+.doctor-diagnosis {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.doctor-diagnosis.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.doctor-diagnosis.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.no-records {
+    text-align: center;
+    padding: 3rem;
+    grid-column: 1 / -1;
+}
+
+.no-records i {
+    font-size: 4rem;
+    color: #ccc;
+    margin-bottom: 1rem;
+}
+
+.upload-btn {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    margin-top: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.upload-btn:hover {
+    background: var(--secondary-color);
+}

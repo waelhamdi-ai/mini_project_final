@@ -138,7 +138,7 @@
                 <div class="card-header">Patient Records</div>
                 <div class="card-body">
                     <p>Access and manage patient medical records</p>
-                    <a href="/patients" class="dashboard-btn">View Records</a>
+                    <a href="{{ url_for('patients') }}" class="dashboard-btn">View Records</a>
                 </div>
             </div>
 
@@ -163,16 +163,27 @@
                     <a href="{{ url_for('settings') }}" class="dashboard-btn">Configure</a>
                 </div>
             </div>
+
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-images"></i>
+                </div>
+                <div class="card-header">Patient Images</div>
+                <div class="card-body">
+                    <p>Review and confirm medical image analysis</p>
+                    <div class="patient-list">
+                        {% for patient in patients %}
+                            <a href="/client_images/{{ patient.email }}" class="patient-link">
+                                {{ patient.name }}'s Images
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Footer section -->
-    <div class="main-footer">
-        <div class="footer-inner">
-            <!-- ...existing footer content... -->
-        </div>
-    </div>
-    <!-- Footer section ended -->
+    {% include 'components/footer_component.html' %}
 
     <script src="../static/js/script.js"></script>
 </body>

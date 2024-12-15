@@ -4,40 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Appointments</title>
-    <script src="https://kit.fontawesome.com/c1df782baf.js"></script>
-    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-thin-rounded/css/uicons-thin-rounded.css'>
-    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: #f4f4f9;
             margin: 0;
             padding: 0;
         }
 
-        .navbar {
-            background-color: #333;
-            padding: 10px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .navbar a {
-            color: #fff;
-            text-decoration: none;
-            margin: 0 10px;
-        }
-
-        .navbar a:hover {
-            text-decoration: underline;
-        }
-
         .container {
-            max-width: 1200px;
-            margin: 50px auto;
+            max-width: 1000px;
+            margin: 100px auto;
             padding: 20px;
             background-color: #fff;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -47,12 +26,20 @@
         h2 {
             text-align: center;
             color: #333;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        .appointments-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
         }
 
         .flip-card {
             background-color: transparent;
             width: 100%;
-            height: 250px;
+            height: 220px;
             perspective: 1000px;
             margin: 20px 0;
         }
@@ -87,27 +74,33 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            padding: 10px;
         }
 
         .flip-card-front img {
             border-radius: 50%;
-            width: 80px;
-            height: 80px;
+            width: 50px;
+            height: 50px;
             object-fit: cover;
             margin-bottom: 10px;
         }
 
         .flip-card-front h5 {
             color: #343a40;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             margin: 0;
+        }
+
+        .flip-card-front p {
+            font-size: 1.2rem;
+            color: #555;
         }
 
         .flip-card-back {
             background: linear-gradient(90deg, #6c757d, #343a40);
             color: white;
             transform: rotateY(180deg);
-            padding: 20px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -116,11 +109,50 @@
 
         .flip-card-back p {
             margin: 6px 0;
-            font-size: 0.9rem;
+            font-size: 1.2rem;
         }
 
         .btn {
             display: inline-block;
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .appointment-form {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .appointment-form label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .appointment-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .appointment-form button {
             padding: 10px 20px;
             background-color: #007bff;
             color: #fff;
@@ -128,52 +160,16 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            font-size: 1rem;
         }
 
-        .btn:hover {
+        .appointment-form button:hover {
             background-color: #0056b3;
-        }
-
-        .alert {
-            padding: 10px;
-            background-color: #dff0d8;
-            color: #3c763d;
-            border-radius: 5px;
-            margin-top: 15px;
         }
     </style>
 </head>
 <body>
-    <!-- Header section -->
-    <header>
-        <div class="logo"><img src="../static/images/logo3.png" alt=""></div>
-        <nav class="navbar">
-            <!-- ...existing navigation items... -->
-        </nav>
-        <div class="right-icons">
-            <!-- ...existing right icons... -->
-        </div>
-    </header>
-
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div>
-            <a class="navbar-brand" href="#">
-                {% if profile_picture %}
-                    <img src="{{ profile_picture }}" alt="Profile" class="profile-img" style="width:40px;height:40px;border-radius:50%;">
-                {% else %}
-                    <img src="{{ url_for('static', filename='images/default_profile.jpg') }}" alt="Profile" class="profile-img" style="width:40px;height:40px;border-radius:50%;">
-                {% endif %}
-                Doctor Dashboard
-            </a>
-        </div>
-        <div>
-            <a class="nav-link" href="/doctor_dashboard">Home</a>
-            <a class="nav-link" href="/appointments">Appointments</a>
-            <a class="nav-link" href="/settings">Settings</a>
-            <a class="nav-link" href="/logout">Logout</a>
-        </div>
-    </nav>
+    {% include 'components/nav_dashboard.html' %}
 
     <!-- Main Container -->
     <div class="container">
@@ -184,7 +180,7 @@
                 Your Appointment
             {% endif %}
         </h2>
-        <div class="row">
+        <div class="appointments-list">
             {% if appointments %}
                 {% for appointment in appointments %}
                     <div class="flip-card">
@@ -193,19 +189,19 @@
                             <div class="flip-card-front">
                                 <img src="{{ appointment.profile_picture or url_for('static', filename='images/default_profile.jpg') }}" 
                                      alt="Profile">
-                                <h5>{{ appointment.client_name }}</h5>
+                                <h5>{{ appointment.patient_name }}</h5>
                                 <p>{{ appointment.date }}</p>
                             </div>
                             <!-- Back Side -->
                             <div class="flip-card-back">
-                                <p><strong>Email:</strong> {{ appointment.client_email }}</p>
+                                <p><strong>Email:</strong> {{ appointment.patient_email }}</p>
                                 <p><strong>Date:</strong> {{ appointment.date }}</p>
                                 <p><strong>Time:</strong> {{ appointment.time }}</p>
                                 <p><strong>Reason:</strong> {{ appointment.reason }}</p>
                                 <p><strong>Status:</strong> {{ appointment.status or 'Pending' }}</p>
-                                {% if is_doctor %}
-                                    <button class="btn" onclick="updateStatus('{{ appointment.client_email }}')">
-                                        Update Status
+                                {% if not is_doctor %}
+                                    <button class="btn" onclick="showUpdateForm('{{ appointment.patient_email }}', '{{ appointment.date }}', '{{ appointment.time }}')">
+                                        Change Date/Time
                                     </button>
                                 {% endif %}
                             </div>
@@ -213,20 +209,62 @@
                     </div>
                 {% endfor %}
             {% else %}
-                <div class="col-12">
-                    <p class="text-center text-muted">No appointments found.</p>
-                </div>
+                <p class="text-center text-muted">No appointments found.</p>
             {% endif %}
         </div>
-    </div>
 
-    <!-- Footer section -->
-    <div class="main-footer">
-        <div class="footer-inner">
-            <!-- ...existing footer content... -->
+        <!-- Appointment Form -->
+        <div class="appointment-form" id="appointmentForm" style="display: none;">
+            <h3>Change Appointment Date and Time</h3>
+            <form id="updateAppointmentForm">
+                <input type="hidden" id="appointment_email" name="appointment_email">
+                <label for="appointment_date">New Appointment Date:</label>
+                <input type="date" id="appointment_date" name="appointment_date" required>
+                
+                <label for="appointment_time">New Appointment Time:</label>
+                <input type="time" id="appointment_time" name="appointment_time" required>
+                
+                <button type="submit">Update Appointment</button>
+            </form>
         </div>
     </div>
 
-    <script src="../static/js/script.js"></script>
+    <script>
+        function showUpdateForm(email, date, time) {
+            document.getElementById('appointment_email').value = email;
+            document.getElementById('appointment_date').value = date;
+            document.getElementById('appointment_time').value = time;
+            document.getElementById('appointmentForm').style.display = 'block';
+        }
+
+        document.getElementById('updateAppointmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('appointment_email').value;
+            const date = document.getElementById('appointment_date').value;
+            const time = document.getElementById('appointment_time').value;
+
+            fetch('/update_appointment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, date, time })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Appointment updated successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating appointment');
+            });
+        });
+    </script>
+    {% include 'components/footer_component.html' %}
 </body>
 </html>

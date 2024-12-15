@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Change Appointment</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .appointment-form {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .appointment-form label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .appointment-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .appointment-form button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .appointment-form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/nav_dashboard.html' %}
+
+    <!-- Main Container -->
+    <div class="container">
+        <h2>Change Appointment Date and Time</h2>
+        <form class="appointment-form" id="changeAppointmentForm">
+            <label for="appointment_date">New Appointment Date:</label>
+            <input type="date" id="appointment_date" name="appointment_date" required>
+            
+            <label for="appointment_time">New Appointment Time:</label>
+            <input type="time" id="appointment_time" name="appointment_time" required>
+            
+            <button type="submit">Update Appointment</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('changeAppointmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const date = document.getElementById('appointment_date').value;
+            const time = document.getElementById('appointment_time').value;
+
+            fetch('/update_appointment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ date, time })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Appointment updated successfully!');
+                    window.location.href = '/appointments';
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating appointment');
+            });
+        });
+    </script>
+    {% include 'components/footer_component.html' %}
+</body>
+</html>

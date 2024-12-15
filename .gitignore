@@ -112,7 +112,7 @@ dmypy.json
 .pyre/
 
 # Firebase credentials
-# firebase-adminsdk.json
+firebase-adminsdk.json
 
 # Cloudinary config
 .cloudinary/

@@ -15,15 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Role toggle handling
     roleButtons.forEach(button => {
         button.addEventListener('click', () => {
-            roleButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            
-            const isDoctor = button.dataset.role === 'doctor';
-            doctorFields.classList.toggle('hidden', !isDoctor);
-            appointmentDetails.classList.toggle('hidden', isDoctor);
-            
-            // Update required fields
-            toggleRequiredFields(isDoctor);
+            toggleRole(button.dataset.role);
         });
     });
 
@@ -33,35 +25,36 @@ document.addEventListener('DOMContentLoaded', () => {
         submitButton.disabled = true;
 
         try {
+            const formData = new FormData();
             const activeRole = document.querySelector('.role-btn.active').dataset.role;
-            const formData = {
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value,
-                phone: document.getElementById('phone').value,
-                role: activeRole
-            };
+            
+            // Add basic form data
+            formData.append('name', document.getElementById('name').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('password', document.getElementById('password').value);
+            formData.append('phone', document.getElementById('phone').value);
+            formData.append('role', activeRole);
 
-            if (activeRole === 'patient') {
-                // Add appointment details
-                formData.appointment_date = document.getElementById('appointment_date').value;
-                formData.appointment_time = document.getElementById('appointment_time').value;
-                formData.doctor_email = document.getElementById('doctor_email').value;
-                formData.appointment_reason = document.getElementById('appointment_reason').value;
-            } else {
-                // Add doctor details
-                formData.specialty = document.getElementById('specialty').value;
-                formData.experience = document.getElementById('license').value;
+            // Add profile picture if selected
+            const profilePicture = document.getElementById('profile_picture').files[0];
+            if (profilePicture) {
+                formData.append('profile_picture', profilePicture);
             }
 
-            console.log('Sending signup data:', formData); // Debug log
+            // Add role-specific data
+            if (activeRole === 'patient') {
+                formData.append('appointment_date', document.getElementById('appointment_date').value);
+                formData.append('appointment_time', document.getElementById('appointment_time').value);
+                formData.append('doctor_email', document.getElementById('doctor_email').value);
+                formData.append('appointment_reason', document.getElementById('appointment_reason').value);
+            } else {
+                formData.append('specialty', document.getElementById('specialty').value);
+                formData.append('license', document.getElementById('license').value);
+            }
 
             const response = await fetch('/signup', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
+                body: formData
             });
 
             const data = await response.json();
@@ -146,7 +139,111 @@ document.addEventListener('DOMContentLoaded', () => {
             input.classList.remove('invalid');
         });
     });
+
+    // Separate initialization function
+    function initializeFormState() {
+        // Get elements
+        const appointmentDetails = document.getElementById('appointmentDetails');
+        const doctorFields = document.querySelector('.doctor-fields');
+        
+        // Show appointment details and hide doctor fields by default
+        if (appointmentDetails) {
+            appointmentDetails.classList.remove('hidden');
+            appointmentDetails.style.display = 'block';
+        }
+        if (doctorFields) {
+            doctorFields.classList.add('hidden');
+            doctorFields.style.display = 'none';
+        }
+
+        // Set patient button as active
+        const patientBtn = document.querySelector('[data-role="patient"]');
+        const doctorBtn = document.querySelector('[data-role="doctor"]');
+        if (patientBtn && doctorBtn) {
+            patientBtn.classList.add('active');
+            doctorBtn.classList.remove('active');
+        }
+
+        // Set required fields for patient
+        toggleRequiredFields(false);
+    }
+
+    // Call initialization immediately when page loads
+    initializeFormState();
+
+    // Set initial state
+    toggleRole('patient');
+
+    // Remove the old initialization code and replace with this new function
+    function showInitialState() {
+        const appointmentDetails = document.getElementById('appointmentDetails');
+        const doctorFields = document.querySelector('.doctor-fields');
+        const patientBtn = document.querySelector('[data-role="patient"]');
+        const doctorBtn = document.querySelector('[data-role="doctor"]');
+
+        // Show appointment details immediately
+        appointmentDetails.style.display = 'block';
+        appointmentDetails.classList.remove('hidden');
+        
+        // Hide doctor fields
+        doctorFields.style.display = 'none';
+        doctorFields.classList.add('hidden');
+
+        // Set active state for patient button
+        patientBtn.classList.add('active');
+        doctorBtn.classList.remove('active');
+
+        // Set required fields
+        toggleRequiredFields(false);
+    }
+
+    // Call this function immediately after DOM loads
+    showInitialState();
+
+    // Remove the old toggleRole call
+    // toggleRole('patient');  <- Remove this line
 });
+
+function toggleRole(role) {
+    // Update buttons
+    document.querySelectorAll('.role-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.role === role) {
+            btn.classList.add('active');
+        }
+    });
+
+    // Get the sections
+    const appointmentDetails = document.getElementById('appointmentDetails');
+    const doctorFields = document.querySelector('.doctor-fields');
+
+    // Reset form fields
+    document.getElementById('signup-form').reset();
+
+    // Toggle visibility based on role with both classList and style
+    if (role === 'patient') {
+        if (appointmentDetails) {
+            appointmentDetails.classList.remove('hidden');
+            appointmentDetails.style.display = 'block';
+        }
+        if (doctorFields) {
+            doctorFields.classList.add('hidden');
+            doctorFields.style.display = 'none';
+        }
+    } else {
+        if (appointmentDetails) {
+            appointmentDetails.classList.add('hidden');
+            appointmentDetails.style.display = 'none';
+        }
+        if (doctorFields) {
+            doctorFields.classList.remove('hidden');
+            doctorFields.style.display = 'block';
+        }
+    }
+
+    // Update required fields
+    toggleRequiredFields(role === 'doctor');
+}
 
 function toggleRequiredFields(isDoctor) {
     // Doctor fields

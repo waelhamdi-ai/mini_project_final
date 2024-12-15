@@ -1,5 +1,7 @@
 let selectedRecipient = null;
 let lastMessageTimestamp = 0;
+let pollingInterval = null;
+let processedMessages = new Set();
 
 document.addEventListener('DOMContentLoaded', function() {
     const userItems = document.querySelectorAll('.user-item');
@@ -9,20 +11,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedUserInfo = document.querySelector('.selected-user .user-info');
     const selectedUserAvatar = document.querySelector('.selected-user .user-avatar img');
 
-    // Handle user selection
+    function startPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+        loadMessages(selectedRecipient);
+        pollingInterval = setInterval(() => {
+            if (selectedRecipient) {
+                loadMessages(selectedRecipient);
+            }
+        }, 3000);
+    }
+
     userItems.forEach(item => {
         item.addEventListener('click', function() {
-            // Remove active class from all users
             userItems.forEach(u => u.classList.remove('active'));
-            // Add active class to selected user
             this.classList.add('active');
-
-            // Update selected recipient
-            selectedRecipient = this.dataset.email;
             
-            // Update header with selected user info
+            selectedRecipient = this.dataset.email;
             const userName = this.querySelector('.user-info h4').textContent;
-            const userEmail = this.querySelector('.user-info p').textContent;
             const userAvatar = this.querySelector('.user-avatar img').src;
             
             selectedUserInfo.innerHTML = `
@@ -31,14 +38,11 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             selectedUserAvatar.src = userAvatar;
 
-            // Load messages
-            loadMessages(selectedRecipient);
-            // Start polling for new messages
+            resetChat();
             startPolling();
         });
     });
 
-    // Handle message submission
     chatForm.addEventListener('submit', function(e) {
         e.preventDefault();
         if (!selectedRecipient) {
@@ -52,26 +56,30 @@ document.addEventListener('DOMContentLoaded', function() {
             messageInput.value = '';
         }
     });
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+    });
 });
 
-function startPolling() {
-    // Poll for new messages every 3 seconds
-    setInterval(() => {
-        if (selectedRecipient) {
-            loadMessages(selectedRecipient);
-        }
-    }, 3000);
-}
-
 function loadMessages(recipientEmail) {
+    if (!recipientEmail) return;
+    
     fetch(`/get_messages?recipient=${recipientEmail}&after=${lastMessageTimestamp}`)
         .then(response => response.json())
         .then(messages => {
             if (messages.length > 0) {
                 const chatBox = document.getElementById('chat-box');
                 messages.forEach(message => {
-                    appendMessage(message);
-                    lastMessageTimestamp = Math.max(lastMessageTimestamp, message.timestamp);
+                    const messageId = message.id || `${message.timestamp}-${message.sender_email}-${message.message}`;
+                    if (!processedMessages.has(messageId)) {
+                        appendMessage(message);
+                        processedMessages.add(messageId);
+                        lastMessageTimestamp = Math.max(lastMessageTimestamp, message.timestamp);
+                    }
                 });
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
@@ -96,13 +104,8 @@ function sendMessage(message) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Immediately append the sent message
-            appendMessage({
-                sender_email: currentUserEmail,
-                sender_profile_picture: document.querySelector('.user-avatar img').src,
-                message: message,
-                timestamp: Date.now()
-            });
+            // Wait for the next poll to show the message
+            setTimeout(() => loadMessages(selectedRecipient), 500);
         } else {
             alert('Failed to send message: ' + data.message);
         }
@@ -118,15 +121,15 @@ function sendMessage(message) {
 
 function appendMessage(message) {
     const chatBox = document.getElementById('chat-box');
-    // Check if message already exists to avoid duplicates
-    const existingMessage = chatBox.querySelector(`[data-timestamp="${message.timestamp}"]`);
-    if (existingMessage) {
+    const messageId = message.id || `${message.timestamp}-${message.sender_email}-${message.message}`;
+    
+    if (document.querySelector(`[data-message-id="${messageId}"]`)) {
         return;
     }
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.sender_email === currentUserEmail ? 'sent' : 'received'}`;
-    messageDiv.setAttribute('data-timestamp', message.timestamp); // Add timestamp as data attribute
+    messageDiv.setAttribute('data-message-id', messageId);
     
     const avatarDiv = document.createElement('div');
     avatarDiv.className = 'user-avatar';
@@ -144,4 +147,11 @@ function appendMessage(message) {
     
     // Scroll to bottom after adding message
     chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function resetChat() {
+    const chatBox = document.getElementById('chat-box');
+    chatBox.innerHTML = '';
+    lastMessageTimestamp = 0;
+    processedMessages.clear();
 }
