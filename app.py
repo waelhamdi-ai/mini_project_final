@@ -890,7 +890,7 @@ def check_session():
             'redirect_url': redirect_url
         })
     return jsonify({'logged_in': False})
-    @app.route('/medical_records')
+
 @app.route('/medical_records')
 def medical_records():
     if 'user_email' not in session:
