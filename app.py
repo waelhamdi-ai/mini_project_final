@@ -891,6 +891,7 @@ def check_session():
         })
     return jsonify({'logged_in': False})
     @app.route('/medical_records')
+@app.route('/medical_records')
 def medical_records():
     if 'user_email' not in session:
         return redirect(url_for('login'))
