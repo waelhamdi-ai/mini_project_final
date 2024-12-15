@@ -18,6 +18,7 @@ cred = credentials.Certificate('firebase-adminsdk.json')  # Make sure this file 
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+
 # Initialize Cloudinary
 cloudinary.config(
     cloud_name = "dxvsu1ntf", 
@@ -888,3 +889,4 @@ def check_session():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
