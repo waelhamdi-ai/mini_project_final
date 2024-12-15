@@ -20,8 +20,7 @@ if firebase_creds:
 else:
     raise ValueError("FIREBASE_CREDS environment variable not set")
 db = firestore.client()
-
-
+# Initialize Cloudinary
 cloudinary.config(
     cloud_name = "dxvsu1ntf", 
     api_key = "234877946597699", 
@@ -306,13 +305,44 @@ def client_dashboard():
     return redirect(url_for('login'))
 
 
+@app.route('/patients')
+def patients():
+    if 'user_email' not in session or session['user_role'] != 'doctor':
+        return redirect(url_for('login'))
+
+    try:
+        # Fetch all clients/patients
+        clients = []
+        clients_ref = db.collection('users').where('role', '==', 'client').stream()
+        
+        for client in clients_ref:
+            client_data = client.to_dict()
+            # Get medical images count for each client
+            images_ref = db.collection('users').document(client.id)\
+                         .collection('medical_images').stream()
+            images_count = sum(1 for _ in images_ref)
+            
+            clients.append({
+                'name': client_data.get('name', 'Unknown'),
+                'email': client_data.get('email'),
+                'profile_picture': client_data.get('profile_picture'),
+                'images_count': images_count,
+                'last_visit': client_data.get('last_visit', 'No visits yet')
+            })
+
+        return render_template('patients.html', clients=clients)
+        
+    except Exception as e:
+        print(f"Error fetching patients: {str(e)}")
+        return redirect(url_for('doctor_dashboard'))
+
 @app.route('/doctor_dashboard')
 def doctor_dashboard():
-    if ('user_email' in session and session['user_role'] == 'doctor'):
+    if 'user_email' in session and session['user_role'] == 'doctor':
         try:
             user = auth.get_user_by_email(session['user_email'])
             user_doc = db.collection('users').document(user.uid).get()
-            if (user_doc.exists):
+            if user_doc.exists:
                 user_data = user_doc.to_dict()
                 profile_picture = user_data.get('profile_picture', None)
                 
@@ -332,9 +362,6 @@ def doctor_dashboard():
                                        clients=clients,
                                        appointments=appointments_list)
         except Exception as e:
-            print(f"Error in doctor dashboard: {str(e)}")
-            session.pop('user_email', None)
-            session.pop('user_role', None)
             print(f"Error in doctor dashboard: {str(e)}")
             session.pop('user_email', None)
             session.pop('user_role', None)
@@ -924,37 +951,6 @@ def check_session():
         })
     return jsonify({'logged_in': False})
 
-@app.route('/patients')
-def patients():
-    if 'user_email' not in session or session['user_role'] != 'doctor':
-        return redirect(url_for('login'))
-
-    try:
-        # Fetch all clients/patients
-        clients = []
-        clients_ref = db.collection('users').where('role', '==', 'client').stream()
-        
-        for client in clients_ref:
-            client_data = client.to_dict()
-            # Get medical images count for each client
-            images_ref = db.collection('users').document(client.id)\
-                         .collection('medical_images').stream()
-            images_count = sum(1 for _ in images_ref)
-            
-            clients.append({
-                'name': patient_data.get('name', 'Unknown'),
-                'email': patient_data.get('email'),
-                'profile_picture': patient_data.get('profile_picture'),
-                'images_count': images_count,
-                'last_visit': patient_data.get('last_visit', 'No visits yet')
-            })
-
-        return render_template('patients.html', patients=patients)
-        
-    except Exception as e:
-        print(f"Error fetching patients: {str(e)}")
-        return redirect(url_for('doctor_dashboard'))
-
 @app.route('/medical_records')
 def medical_records():
     if 'user_email' not in session or session['user_role'] != 'client':
@@ -1058,5 +1054,5 @@ def change_appointment():
 
     return render_template('change_appointment.html', profile_picture=user_data.get('profile_picture'))
 
-if __name__ == '__main__':    app.run(debug=True, host='0.0.0.0', port=5000)
-
+if __name__ == '__main__':    
+    app.run(debug=True, host='0.0.0.0', port=5000)
