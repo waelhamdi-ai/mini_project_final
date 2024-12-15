@@ -24,6 +24,7 @@ else:
 
 db = firestore.client()
 
+
 # Initialize Cloudinary
 cloudinary.config(
     cloud_name = "dxvsu1ntf", 
@@ -193,88 +194,72 @@ def login():
 def signup():
     if request.method == 'POST':
         try:
-            # Check content type
-            if not request.is_json:
-                return jsonify({
-                    "success": False,
-                    "message": "Content-Type must be application/json"
-                }), 415
-
-            data = request.get_json()
-            print("Received signup data:", data)  # Debug log
-
+            # Get form data
+            name = request.form.get('name')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            role = request.form.get('role')
+            
             # Create user in Firebase Auth
-            try:
-                user = auth.create_user(
-                    email=data['email'],
-                    password=data['password'],
-                    display_name=data['name']
-                )
+            user = auth.create_user(
+                email=email,
+                password=password,
+                display_name=name
+            )
 
-                # Prepare user data for Firestore
-                user_data = {
-                    'name': data['name'],
-                    'email': data['email'],
-                    'phone': data.get('phone', ''),
-                    'role': data['role'],
-                    'created_at': firestore.SERVER_TIMESTAMP
-                }
+            # Handle profile picture upload
+            profile_picture_url = None
+            if 'profile_picture' in request.files:
+                profile_pic = request.files['profile_picture']
+                if profile_pic and profile_pic.filename:
+                    try:
+                        upload_result = cloudinary.uploader.upload(
+                            profile_pic,
+                            folder=f"profile_pictures/{email}"
+                        )
+                        profile_picture_url = upload_result['secure_url']
+                    except Exception as e:
+                        print(f"Error uploading profile picture: {str(e)}")
 
-                # Add role-specific data
-                if data['role'] == 'patient':
-                    # Add appointment data
-                    user_data.update({
-                        'appointment_date': data.get('appointment_date'),
-                        'appointment_time': data.get('appointment_time'),
-                        'appointment_reason': data.get('appointment_reason'),
-                        'doctor_email': data.get('doctor_email'),
-                        'status': 'pending'  # Appointment status
-                    })
-                    
-                    # Create appointment document
-                    appointment_data = {
-                        'patient_email': data['email'],
-                        'patient_name': data['name'],
-                        'doctor_email': data.get('doctor_email'),
-                        'date': data.get('appointment_date'),
-                        'time': data.get('appointment_time'),
-                        'reason': data.get('appointment_reason'),
-                        'status': 'pending',
-                        'created_at': firestore.SERVER_TIMESTAMP
-                    }
-                    
-                    # Save appointment in appointments collection
-                    db.collection('appointments').add(appointment_data)
+            # Prepare user data for Firestore
+            user_data = {
+                'name': name,
+                'email': email,
+                'phone': request.form.get('phone', ''),
+                'role': role,
+                'profile_picture': profile_picture_url,
+                'created_at': firestore.SERVER_TIMESTAMP
+            }
 
-                elif data['role'] == 'doctor':
-                    user_data.update({
-                        'specialty': data.get('specialty', ''),
-                        'experience': data.get('experience', ''),
-                        'license': data.get('license', '')
-                    })
-
-                # Save user data in Firestore
-                db.collection('users').document(user.uid).set(user_data)
-
-                print(f"User created successfully: {user.uid}")  # Debug log
-                return jsonify({
-                    "success": True,
-                    "message": "Signup successful!",
-                    "uid": user.uid
+            # Add role-specific data
+            if role == 'patient':
+                user_data.update({
+                    'appointment_date': request.form.get('appointment_date'),
+                    'appointment_time': request.form.get('appointment_time'),
+                    'appointment_reason': request.form.get('appointment_reason'),
+                    'doctor_email': request.form.get('doctor_email'),
+                    'status': 'pending'
+                })
+            elif role == 'doctor':
+                user_data.update({
+                    'specialty': request.form.get('specialty', ''),
+                    'license': request.form.get('license', '')
                 })
 
-            except Exception as e:
-                print(f"Error creating user: {str(e)}")  # Debug log
-                return jsonify({
-                    "success": False,
-                    "message": str(e)
-                }), 400
+            # Save user data in Firestore
+            db.collection('users').document(user.uid).set(user_data)
+
+            return jsonify({
+                "success": True,
+                "message": "Signup successful!",
+                "uid": user.uid
+            })
 
         except Exception as e:
-            print(f"Server error: {str(e)}")  # Debug log
+            print(f"Error in signup: {str(e)}")
             return jsonify({
                 "success": False,
-                "message": f"Server error: {str(e)}"
+                "message": str(e)
             }), 500
 
     # GET request - fetch doctors for the form
@@ -406,6 +391,7 @@ def change_password():
         return jsonify({"success": True, "message": "Password updated successfully!"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
+
 
 
 @app.route('/upload_profile_picture', methods=['POST'])
@@ -702,25 +688,37 @@ def dashboard():
 
 @app.route('/upload_medical_image', methods=['POST'])
 def upload_medical_image():
-    if ('user_email' not in session):
+    if 'user_email' not in session:
         return jsonify({"success": False, "message": "Please login first"}), 401
 
-    if ('medical_image' not in request.files):
+    if 'medical_image' not in request.files:
         return jsonify({"success": False, "message": "No file uploaded"}), 400
 
     medical_image = request.files['medical_image']
     description = request.form.get('image_description', '')
 
-    if (medical_image.filename == ''):
+    if medical_image.filename == '':
         return jsonify({"success": False, "message": "No file selected"}), 400
 
     try:
-        # Read the image file
-        image_bytes = medical_image.read()
+        # Save file temporarily and get image bytes for AI processing
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(medical_image.filename))
+        medical_image.save(temp_path)
         
+        # Process image with AI model
+        with open(temp_path, 'rb') as img_file:
+            img_bytes = img_file.read()
+            processed_image = preprocess_image(img_bytes)
+            if processed_image is not None:
+                prediction = model.predict(processed_image)
+                predicted_class = categories[np.argmax(prediction)]
+                confidence = float(np.max(prediction))
+            else:
+                predicted_class = "Error processing image"
+                confidence = 0.0
+
         # Upload to Cloudinary
-        upload_result = cloudinary.uploader.upload(
-            medical_image,
+        upload_result = cloudinary.uploader.upload(temp_path,
             folder=f"medical_images/{session['user_email']}"
         )
         file_url = upload_result['secure_url']
@@ -728,14 +726,21 @@ def upload_medical_image():
         # Get user reference
         user = auth.get_user_by_email(session['user_email'])
         
-        # Store in Firestore
+        # Store in Firestore with AI results
         image_data = {
             'url': file_url,
             'description': description,
             'upload_date': firestore.SERVER_TIMESTAMP,
             'filename': medical_image.filename,
-            'status': 'pending_analysis'
+            'ai_prediction': predicted_class,
+            'ai_confidence': confidence,
+            'status': 'pending_doctor_confirmation',
+            'doctor_confirmed': False
         }
+
+        # Clean up temporary file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
         # Add to user's medical_images collection
         db.collection('users').document(user.uid)\
@@ -743,7 +748,9 @@ def upload_medical_image():
 
         return jsonify({
             "success": True, 
-            "message": "Image uploaded successfully",
+            "message": "Image uploaded and analyzed successfully",
+            "prediction": predicted_class,
+            "confidence": confidence,
             "redirect": url_for('upload_page')
         })
 
@@ -752,6 +759,43 @@ def upload_medical_image():
         return jsonify({
             "success": False,
             "message": f"Error uploading image: {str(e)}"
+        }), 500
+
+# Add new route for doctor confirmation
+@app.route('/confirm_diagnosis', methods=['POST'])
+def confirm_diagnosis():
+    if 'user_email' not in session or session['user_role'] != 'doctor':
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    try:
+        data = request.get_json()
+        image_id = data.get('image_id')
+        user_id = data.get('user_id')
+        doctor_diagnosis = data.get('diagnosis')
+        
+        if not all([image_id, user_id, doctor_diagnosis]):
+            return jsonify({"success": False, "message": "Missing required data"}), 400
+
+        # Update the image document with doctor's confirmation
+        db.collection('users').document(user_id)\
+          .collection('medical_images').document(image_id)\
+          .update({
+              'doctor_confirmed': True,
+              'doctor_diagnosis': doctor_diagnosis,
+              'confirmed_by': session['user_email'],
+              'confirmation_date': firestore.SERVER_TIMESTAMP
+          })
+
+        return jsonify({
+            "success": True,
+            "message": "Diagnosis confirmed successfully"
+        })
+
+    except Exception as e:
+        print(f"Confirmation error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error confirming diagnosis: {str(e)}"
         }), 500
 
 @app.route('/upload')
@@ -851,3 +895,4 @@ def check_session():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
