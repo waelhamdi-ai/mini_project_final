@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import datetime, timedelta  # Add timedelta here
 import firebase_admin
@@ -12,11 +13,10 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import io
-import pickle  # Add this import statement
-import joblib  # Add this import statement
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate('firebase-adminsdk.json')  # Make sure this file is in the right directory
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 

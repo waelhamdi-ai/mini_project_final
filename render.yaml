@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: hospital-website
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: gunicorn app:app
+    files:
+      - source: firebase-adminsdk.json
+        destination: /opt/render/project/src/firebase-adminsdk.json
