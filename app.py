@@ -12,12 +12,13 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import io
+import pickle  # Add this import statement
+import joblib  # Add this import statement
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate('firebase-adminsdk.json')  # Make sure this file is in the right directory
 firebase_admin.initialize_app(cred)
 db = firestore.client()
-
 
 # Initialize Cloudinary
 cloudinary.config(
@@ -152,10 +153,7 @@ def login():
                 # Set session data with role mapping
                 user_data = user_doc.to_dict()
                 session['user_email'] = email
-                # Map 'patient' role to 'client'
-                role = user_data.get('role', 'client')
-                if role == 'patient':
-                    role = 'client'
+                role = user_data.get('role', 'patient')  # Default to 'patient' if role is not found
                 session['user_role'] = role
                 session['profile_picture'] = user_data.get('profile_picture')
                 
@@ -274,7 +272,7 @@ def signup():
 
 @app.route('/client_dashboard')
 def client_dashboard():
-    if ('user_email' in session and session['user_role'] == 'client'):
+    if ('user_email' in session and session['user_role'] == 'patient'):
         try:
             user = auth.get_user_by_email(session['user_email'])
             user_doc = db.collection('users').document(user.uid).get()
@@ -307,19 +305,50 @@ def client_dashboard():
     return redirect(url_for('login'))
 
 
+@app.route('/patients')
+def patients():
+    if 'user_email' not in session or session['user_role'] != 'doctor':
+        return redirect(url_for('login'))
+
+    try:
+        # Fetch all clients/patients
+        clients = []
+        clients_ref = db.collection('users').where('role', '==', 'patient').stream()
+        
+        for client in clients_ref:
+            client_data = client.to_dict()
+            # Get medical images count for each client
+            images_ref = db.collection('users').document(client.id)\
+                         .collection('medical_images').stream()
+            images_count = sum(1 for _ in images_ref)
+            
+            clients.append({
+                'name': client_data.get('name', 'Unknown'),
+                'email': client_data.get('email'),
+                'profile_picture': client_data.get('profile_picture'),
+                'images_count': images_count,
+                'last_visit': client_data.get('last_visit', 'No visits yet')
+            })
+
+        return render_template('patients.html', clients=clients)
+        
+    except Exception as e:
+        print(f"Error fetching patients: {str(e)}")
+        return redirect(url_for('doctor_dashboard'))
+
 @app.route('/doctor_dashboard')
 def doctor_dashboard():
-    if ('user_email' in session and session['user_role'] == 'doctor'):
+    if 'user_email' in session and session['user_role'] == 'doctor':
         try:
             user = auth.get_user_by_email(session['user_email'])
             user_doc = db.collection('users').document(user.uid).get()
-            if (user_doc.exists):
+            if user_doc.exists:
                 user_data = user_doc.to_dict()
                 profile_picture = user_data.get('profile_picture', None)
                 
                 # Fetch clients
                 clients = []
-                clients_ref = db.collection('users').where('role', '==', 'client').stream()
+                clients_ref = db.collection('users').where('role', '==', 'patient').stream()
                 for client in clients_ref:
                     clients.append(client.to_dict())
 
@@ -458,41 +487,42 @@ def get_messages():
         messages = []
         
         # Get messages where current user is sender
-        sent_query = db.collection('messages')\
+        sent_messages = db.collection('messages')\
             .where('sender_email', '==', user_email)\
             .where('recipient_email', '==', recipient_email)\
             .stream()
-            
+
         # Get messages where current user is recipient
-        received_query = db.collection('messages')\
+        received_messages = db.collection('messages')\
             .where('sender_email', '==', recipient_email)\
             .where('recipient_email', '==', user_email)\
             .stream()
 
-        for msg in sent_query:
+        # Process sent messages
+        for msg in sent_messages:
             msg_data = msg.to_dict()
-            timestamp = msg_data.get('timestamp', 0)
-            if timestamp > after_timestamp:
+            timestamp = msg_data.get('timestamp')
+            if timestamp and timestamp.timestamp() > after_timestamp:
                 messages.append({
                     'sender_email': user_email,
                     'sender_profile_picture': session.get('profile_picture'),
                     'message': msg_data['message'],
-                    'timestamp': timestamp
+                    'timestamp': timestamp.timestamp()
                 })
 
-        for msg in received_query:
+        # Process received messages
+        for msg in received_messages:
             msg_data = msg.to_dict()
-            timestamp = msg_data.get('timestamp', 0)
-            if timestamp > after_timestamp:
-                sender_doc = db.collection('users').where('email', '==', recipient_email).limit(1).get()
-                sender_data = next(iter(sender_doc)).to_dict() if sender_doc else {}
+            timestamp = msg_data.get('timestamp')
+            if timestamp and timestamp.timestamp() > after_timestamp:
                 messages.append({
                     'sender_email': recipient_email,
-                    'sender_profile_picture': sender_data.get('profile_picture'),
+                    'sender_profile_picture': msg_data.get('sender_profile_picture'),
                     'message': msg_data['message'],
-                    'timestamp': timestamp
+                    'timestamp': timestamp.timestamp()
                 })
 
+        # Sort messages by timestamp
         messages.sort(key=lambda x: x['timestamp'])
         return jsonify(messages)
 
@@ -513,11 +543,16 @@ def send_message():
         return jsonify({"success": False, "message": "Message and recipient are required."})
 
     try:
+        # Get sender info
         sender = auth.get_user_by_email(session['user_email'])
         sender_doc = db.collection('users').document(sender.uid).get()
         sender_data = sender_doc.to_dict()
 
+        # Generate a unique ID using timestamp and random string
+        message_id = f"{int(time.time() * 1000)}-{os.urandom(4).hex()}"
+
         message_data = {
+            'id': message_id,
             'sender': sender.uid,
             'sender_email': session['user_email'],
             'sender_name': sender_data.get('name', ''),
@@ -527,18 +562,13 @@ def send_message():
             'timestamp': firestore.SERVER_TIMESTAMP
         }
 
-        # Add message to Firestore
-        db.collection('messages').add(message_data)
+        # Add message to Firestore using the generated ID
+        db.collection('messages').document(message_id).set(message_data)
 
         return jsonify({
             "success": True,
             "message": "Message sent successfully!",
-            "data": {
-                "sender_email": session['user_email'],
-                "sender_profile_picture": sender_data.get('profile_picture'),
-                "message": message,
-                "timestamp": datetime.now().timestamp()
-            }
+            "message_id": message_id  # Return the message ID
         })
 
     except Exception as e:
@@ -547,7 +577,7 @@ def send_message():
 
 @app.route('/appointments')
 def appointments():
-    if ('user_email' not in session):
+    if 'user_email' not in session:
         return redirect(url_for('login'))
     
     try:
@@ -555,40 +585,46 @@ def appointments():
         user_doc = db.collection('users').document(user.uid).get()
         user_data = user_doc.to_dict()
 
-        if (session['user_role'] == 'doctor'):
-            # Get all clients with appointments for the logged-in doctor
-            clients = db.collection('users').where('role', '==', 'client').where('doctor_email', '==', session['user_email']).stream()
+        if session['user_role'] == 'doctor':
+            # Get all patients with appointments for the logged-in doctor
+            patients = db.collection('users').where('role', '==', 'patient').where('doctor_email', '==', session['user_email']).stream()
             appointments_list = []
             
-            for client in clients:
-                client_data = client.to_dict()
-                if (client_data.get('appointment_date')):  # Check if appointment exists
+            for patient in patients:
+                patient_data = patient.to_dict()
+                if patient_data.get('appointment_date'):  # Check if appointment exists
                     appointments_list.append({
-                        'client_name': client_data.get('name', 'Unknown'),
-                        'client_email': client_data.get('email', ''),
-                        'date': client_data.get('appointment_date', ''),
-                        'time': client_data.get('appointment_time', ''),
-                        'reason': client_data.get('appointment_reason', '')
+                        'patient_name': patient_data.get('name', 'Unknown'),
+                        'patient_email': patient_data.get('email', ''),
+                        'date': patient_data.get('appointment_date', ''),
+                        'time': patient_data.get('appointment_time', ''),
+                        'reason': patient_data.get('appointment_reason', ''),
+                        'profile_picture': patient_data.get('profile_picture', url_for('static', filename='images/default_profile.jpg')),
+                        'status': patient_data.get('status', 'Pending')
                     })
             
             return render_template('appointments.html', 
-                                appointments=appointments_list,
-                                is_doctor=True,
-                                user_data=user_data)
+                                   appointments=appointments_list,
+                                   is_doctor=True,
+                                   profile_picture=session.get('profile_picture'),
+                                   user_data=user_data)
         else:
-            # Get client's own appointment
+            # Get patient's own appointment
             appointment = {
-                'client_name': user_data.get('name'),
-                'client_email': user_data.get('email'),
+                'patient_name': user_data.get('name'),
+                'patient_email': user_data.get('email'),
                 'date': user_data.get('appointment_date'),
                 'time': user_data.get('appointment_time'),
-                'reason': user_data.get('appointment_reason')
+                'reason': user_data.get('appointment_reason'),
+                'profile_picture': user_data.get('profile_picture', url_for('static', filename='images/default_profile.jpg')),
+                'status': user_data.get('status', 'Pending')
             }
             
             return render_template('appointments.html',
-                                appointments=[appointment],
-                                is_doctor=False,
-                                user_data=user_data)
+                                   appointments=[appointment],
+                                   is_doctor=False,
+                                   profile_picture=session.get('profile_picture'),
+                                   user_data=user_data)
 
     except Exception as e:
         print(f"Error in appointments route: {str(e)}")
@@ -673,7 +709,7 @@ def upload_to_firebase(file_path):
 @app.route('/dashboard')
 def dashboard():
     if ('user_email' in session):
-        if (session['user_role'] == 'client'):
+        if (session['user_role'] == 'patient'):
             return redirect(url_for('client_dashboard'))
         elif (session['user_role'] == 'doctor'):
             return redirect(url_for('doctor_dashboard'))
@@ -764,26 +800,37 @@ def confirm_diagnosis():
     try:
         data = request.get_json()
         image_id = data.get('image_id')
-        user_id = data.get('user_id')
-        doctor_diagnosis = data.get('diagnosis')
-        
-        if not all([image_id, user_id, doctor_diagnosis]):
+        diagnosis = data.get('diagnosis')
+        client_email = data.get('client_email')  # Get client email from request
+
+        if not all([image_id, diagnosis, client_email]):
             return jsonify({"success": False, "message": "Missing required data"}), 400
 
-        # Update the image document with doctor's confirmation
-        db.collection('users').document(user_id)\
-          .collection('medical_images').document(image_id)\
-          .update({
-              'doctor_confirmed': True,
-              'doctor_diagnosis': doctor_diagnosis,
-              'confirmed_by': session['user_email'],
-              'confirmation_date': firestore.SERVER_TIMESTAMP
-          })
+        # First, get the client's document
+        clients = db.collection('users').where('email', '==', client_email).limit(1).stream()
+        client_doc = next(clients, None)
+        
+        if not client_doc:
+            return jsonify({"success": False, "message": "Client not found"}), 404
 
-        return jsonify({
-            "success": True,
-            "message": "Diagnosis confirmed successfully"
-        })
+        # Now update the specific image in the client's medical_images subcollection
+        try:
+            db.collection('users').document(client_doc.id)\
+              .collection('medical_images').document(image_id)\
+              .update({
+                  'doctor_confirmed': True,
+                  'doctor_diagnosis': diagnosis,
+                  'confirmed_by': session['user_email'],
+                  'confirmation_date': firestore.SERVER_TIMESTAMP
+              })
+
+            return jsonify({
+                "success": True,
+                "message": "Diagnosis confirmed successfully"
+            })
+        except Exception as e:
+            print(f"Error updating image: {str(e)}")
+            return jsonify({"success": False, "message": "Error updating image"}), 500
 
     except Exception as e:
         print(f"Confirmation error: {str(e)}")
@@ -848,34 +895,51 @@ def confirm_analysis():
 
 @app.route('/client_images/<client_email>')
 def client_images(client_email):
-    if ('user_email' in session and session['user_role'] == 'doctor'):
-        try:
-            client_doc = db.collection('users').where('email', '==', client_email).limit(1).get()
-            if (client_doc):
-                client_data = client_doc[0].to_dict()
-                client_name = client_data.get('name', 'Unknown')
+    if 'user_email' not in session or session['user_role'] != 'doctor':
+        return redirect(url_for('login'))
 
-                # Fetch medical images
-                medical_images = []
-                images_ref = db.collection('users').document(client_doc[0].id)\
-                             .collection('medical_images')\
-                             .order_by('upload_date', direction=firestore.Query.DESCENDING)\
-                             .stream()
-                
-                for img in images_ref:
-                    img_data = img.to_dict()
-                    img_data['id'] = img.id
-                    img_data['upload_date'] = img_data['upload_date'].strftime('%Y-%m-%d %H:%M:%S')\
-                        if (img_data.get('upload_date')) else 'Unknown'
-                    medical_images.append(img_data)
-
-                return render_template('client_images.html',
-                                       client_name=client_name,
-                                       medical_images=medical_images)
-        except Exception as e:
-            print(f"Error fetching client images: {str(e)}")
+    try:
+        clients = db.collection('users').where('email', '==', client_email).limit(1).stream()
+        client_doc = next(clients, None)
+        
+        if not client_doc:
             return redirect(url_for('doctor_dashboard'))
-    return redirect(url_for('login'))
+            
+        client_data = client_doc.to_dict()
+        
+        # Fetch medical images
+        medical_images = []
+        images_ref = db.collection('users').document(client_doc.id)\
+                     .collection('medical_images')\
+                     .order_by('upload_date', direction=firestore.Query.DESCENDING)\
+                     .stream()
+        
+        for img in images_ref:
+            img_data = img.to_dict()
+            img_data['id'] = img.id
+            
+            # Handle missing values with defaults
+            if img_data.get('upload_date'):
+                img_data['upload_date'] = img_data['upload_date'].strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                img_data['upload_date'] = 'Unknown'
+                
+            # Set default values for AI prediction and confidence
+            if 'ai_prediction' not in img_data:
+                img_data['ai_prediction'] = 'Not analyzed'
+            if 'ai_confidence' not in img_data:
+                img_data['ai_confidence'] = 0.0
+                
+            medical_images.append(img_data)
+
+        return render_template('client_images.html',
+                           client_name=client_data.get('name', 'Unknown'),
+                           client_email=client_email,
+                           medical_images=medical_images)
+                           
+    except Exception as e:
+        print(f"Error in client_images: {str(e)}")
+        return redirect(url_for('doctor_dashboard'))
 
 @app.route('/check_session')
 def check_session():
@@ -887,6 +951,139 @@ def check_session():
         })
     return jsonify({'logged_in': False})
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+@app.route('/medical_records')
+def medical_records():
+    if 'user_email' not in session or session['user_role'] != 'client':
+        return redirect(url_for('login'))
 
+    try:
+        # Get user data
+        user = auth.get_user_by_email(session['user_email'])
+        user_doc = db.collection('users').document(user.uid).get()
+        user_data = user_doc.to_dict()
+
+        # Fetch medical images and diagnoses
+        medical_records = []
+        images_ref = db.collection('users').document(user.uid)\
+                     .collection('medical_images')\
+                     .order_by('upload_date', direction=firestore.Query.DESCENDING)\
+                     .stream()
+        
+        for img in images_ref:
+            img_data = img.to_dict()
+            record = {
+                'id': img.id,
+                'url': img_data.get('url'),
+                'upload_date': img_data.get('upload_date').strftime('%Y-%m-%d %H:%M:%S') if img_data.get('upload_date') else 'Unknown',
+                'ai_prediction': img_data.get('ai_prediction', 'Not analyzed'),
+                'ai_confidence': img_data.get('ai_confidence', 0.0),
+                'doctor_diagnosis': img_data.get('doctor_diagnosis'),
+                'doctor_confirmed': img_data.get('doctor_confirmed', False),
+                'confirmed_by': img_data.get('confirmed_by'),
+                'confirmation_date': img_data.get('confirmation_date'),
+                'description': img_data.get('description', '')
+            }
+            medical_records.append(record)
+
+        return render_template('medical_records.html', 
+                            user_data=user_data,
+                            medical_records=medical_records,
+                            profile_picture=user_data.get('profile_picture'))
+
+    except Exception as e:
+        print(f"Error fetching medical records: {str(e)}")
+        return redirect(url_for('client_dashboard'))
+
+@app.route('/update_appointment', methods=['POST'])
+def update_appointment():
+    if 'user_email' not in session or session['user_role'] != 'patient':
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    try:
+        data = request.get_json()
+        new_date = data.get('date')
+        new_time = data.get('time')
+
+        if not all([new_date, new_time]):
+            return jsonify({"success": False, "message": "Date and time are required"}), 400
+
+        # Update the appointment in Firestore
+        user = auth.get_user_by_email(session['user_email'])
+        db.collection('users').document(user.uid).update({
+            'appointment_date': new_date,
+            'appointment_time': new_time,
+            'last_updated': firestore.SERVER_TIMESTAMP
+        })
+
+        # Notify the doctor about the change (optional)
+        user_doc = db.collection('users').document(user.uid).get()
+        user_data = user_doc.to_dict()
+        doctor_email = user_data.get('doctor_email')
+        
+        if doctor_email:
+            notification_data = {
+                'type': 'appointment_update',
+                'patient_name': user_data.get('name'),
+                'patient_email': session['user_email'],
+                'new_date': new_date,
+                'new_time': new_time,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            }
+            db.collection('notifications').add(notification_data)
+
+        return jsonify({
+            "success": True,
+            "message": "Appointment updated successfully"
+        })
+
+    except Exception as e:
+        print(f"Error updating appointment: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error updating appointment: {str(e)}"
+        }), 500
+
+@app.route('/change_appointment')
+def change_appointment():
+    if 'user_email' not in session or session['user_role'] != 'patient':
+        return redirect(url_for('login'))
+
+    user = auth.get_user_by_email(session['user_email'])
+    user_doc = db.collection('users').document(user.uid).get()
+    user_data = user_doc.to_dict()
+
+    return render_template('change_appointment.html', profile_picture=user_data.get('profile_picture'))
+
+@app.route('/predict_diabetes', methods=['GET', 'POST'])
+def predict_diabetes():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        try:
+            # Get form data
+            pregnancies = int(request.form.get('pregnancies'))
+            glucose = int(request.form.get('glucose'))
+            blood_pressure = int(request.form.get('blood_pressure'))
+            skin_thickness = int(request.form.get('skin_thickness'))
+            insulin = int(request.form.get('insulin'))
+            bmi = float(request.form.get('bmi'))
+            diabetes_pedigree_function = float(request.form.get('diabetes_pedigree_function'))
+            age = int(request.form.get('age'))
+
+            # Prepare data for prediction
+            input_data = [[pregnancies, glucose, blood_pressure, skin_thickness, insulin, bmi, diabetes_pedigree_function, age]]
+            input_data_scaled = scaler.transform(input_data)  # Scale the input data
+            prediction = diabetes_model.predict(input_data_scaled)
+            result = 'Positive' if prediction[0] == 1 else 'Negative'
+
+            return render_template('predict_diabetes.html', result=result)
+
+        except Exception as e:
+            print(f"Error predicting diabetes: {str(e)}")
+            return render_template('predict_diabetes.html', error=str(e))
+
+    return render_template('predict_diabetes.html')
+
+if __name__ == '__main__':    
+    app.run(debug=True, host='0.0.0.0', port=5000)
